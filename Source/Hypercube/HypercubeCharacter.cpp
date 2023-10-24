@@ -27,10 +27,11 @@ AHypercubeCharacter::AHypercubeCharacter()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-	GetCharacterMovement()->JumpZVelocity = 600.f;
-	GetCharacterMovement()->AirControl = 0.2f;
+	MoveComp = GetCharacterMovement();
+	MoveComp->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	MoveComp->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
+	MoveComp->JumpZVelocity = 600.f;
+	MoveComp->AirControl = 0.2f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -43,8 +44,9 @@ AHypercubeCharacter::AHypercubeCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	Health = MaxHealth = 100;
+	InvincAfterDamage = 1.0f;
+	bIsInvincible = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -67,35 +69,6 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("TurnRate", this, &AHypercubeCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AHypercubeCharacter::LookUpAtRate);
-
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &AHypercubeCharacter::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &AHypercubeCharacter::TouchStopped);
-
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AHypercubeCharacter::OnResetVR);
-}
-
-
-void AHypercubeCharacter::OnResetVR()
-{
-	// If Hypercube is added to a project via 'Add Feature' in the Unreal Editor the dependency on HeadMountedDisplay in Hypercube.Build.cs is not automatically propagated
-	// and a linker error will result.
-	// You will need to either:
-	//		Add "HeadMountedDisplay" to [YourProject].Build.cs PublicDependencyModuleNames in order to build successfully (appropriate if supporting VR).
-	// or:
-	//		Comment or delete the call to ResetOrientationAndPosition below (appropriate if not supporting VR)
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
-
-void AHypercubeCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		Jump();
-}
-
-void AHypercubeCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		StopJumping();
 }
 
 void AHypercubeCharacter::TurnAtRate(float Rate)
@@ -126,15 +99,42 @@ void AHypercubeCharacter::MoveForward(float Value)
 
 void AHypercubeCharacter::MoveRight(float Value)
 {
-	if ( (Controller != nullptr) && (Value != 0.0f) )
+	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-	
+
 		// get right vector 
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
+}
+
+void AHypercubeCharacter::TakeDamage(int damage)
+{
+	if (bIsInvincible)
+	{
+		return;
+	}
+	Health -= damage;
+	bIsInvincible = true;
+	UE_LOG(LogTemp, Warning, TEXT("Damage: %d, Now Health: %d"), damage, Health);
+	if (Health <= 0)
+	{
+		PlayDeath();
+		return;
+	}
+	GetWorld()->GetTimerManager().SetTimer(InvincTimerHandle, this, &AHypercubeCharacter::OnEndInvincibility, InvincAfterDamage, false);
+}
+
+void AHypercubeCharacter::OnEndInvincibility()
+{
+	bIsInvincible = false;
+}
+
+void AHypercubeCharacter::PlayDeath()
+{
+	MoveComp->DisableMovement();
 }
