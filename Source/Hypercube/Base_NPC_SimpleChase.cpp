@@ -5,12 +5,16 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/BoxComponent.h"
+#include "Math/UnrealMathVectorCommon.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "HypercubeCharacter.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	Capsule = GetCapsuleComponent();
 	Capsule->InitCapsuleSize(42.0f, 96.0f);
@@ -31,6 +35,9 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	OpenerTime = 0.7f;
 	AttackTime = 0.3f;
 	AfterAttackTime = 0.2f;
+	AttackRotationMultiplier = 7.5f;
+	Phase = AttackPhase::NotAttacking;
+	AttackTarget = nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -40,8 +47,62 @@ void ABase_NPC_SimpleChase::BeginPlay()
 	
 }
 
-void ABase_NPC_SimpleChase::SetAttackCollision(bool active)
+void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
 {
-	AttackCollision->SetVisibility(active);
-	AttackCollision->SetActive(active);
+	if (Phase != AttackPhase::NotAttacking)
+	{
+		TickRotateToTarget(DeltaSeconds);
+	}
+	if (Phase == AttackPhase::Attacking)
+	{
+		TSet<AActor*> collisions;
+		AttackCollision->GetOverlappingActors(collisions, AHypercubeCharacter::StaticClass());
+		if (collisions.Num())
+		{
+			AttackTarget->TakeDamage(Damage);
+		}
+	}
+	Super::Tick(DeltaSeconds);
+}
+
+void ABase_NPC_SimpleChase::TickRotateToTarget(float DeltaSeconds)
+{
+	FVector ToTarget = AttackTarget->GetActorLocation() - GetActorLocation();
+	ToTarget.Z = 0.0f;
+	ToTarget.Normalize();
+	SetActorRotation(UKismetMathLibrary::MakeRotFromX(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * AttackRotationMultiplier)));
+}
+
+void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
+{
+	AttackCollision->SetVisibility(Active);
+	AttackCollision->SetActive(Active);
+}
+
+void ABase_NPC_SimpleChase::Attack()
+{
+	if (!AttackTarget)
+	{
+		AttackTarget = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	}
+	switch (Phase)
+	{
+	case AttackPhase::NotAttacking:
+		Phase = AttackPhase::Opener;
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, OpenerTime, false);
+		return;
+	case AttackPhase::Opener:
+		Phase = AttackPhase::Attacking;
+		SetAttackCollision(true);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, AttackTime, false);
+		return;
+	case AttackPhase::Attacking:
+		Phase = AttackPhase::AfterAttack;
+		SetAttackCollision(false);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, AfterAttackTime, false);
+		return;
+	case AttackPhase::AfterAttack:
+		Phase = AttackPhase::NotAttacking;
+		AttackEndDelegate.Broadcast(true);
+	}
 }

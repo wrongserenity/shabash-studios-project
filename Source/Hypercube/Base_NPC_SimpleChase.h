@@ -25,7 +25,7 @@ public:
 	class UBoxComponent* AttackCollision;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
-	FOnAttackEnd AttackEnd;
+	FOnAttackEnd AttackEndDelegate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	float Damage;
@@ -39,13 +39,29 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	float AfterAttackTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
+	float AttackRotationMultiplier;
 
 protected:
 
+	FTimerHandle AttackTimerHandle;
+
+	enum class AttackPhase { NotAttacking, Opener, Attacking, AfterAttack };
+	AttackPhase Phase;
+
+	class AHypercubeCharacter* AttackTarget;
+
 	virtual void BeginPlay() override;
+
+	virtual void Tick(float DeltaSeconds) override;
+
+	void TickRotateToTarget(float DeltaSeconds);
 
 public:	
 
 	UFUNCTION(BlueprintCallable)
-	void SetAttackCollision(bool active);
+	void SetAttackCollision(bool Active);
+
+	UFUNCTION(BlueprintCallable)
+	void Attack();
 };
