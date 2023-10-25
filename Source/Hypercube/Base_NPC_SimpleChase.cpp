@@ -16,6 +16,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Capsule->InitCapsuleSize(42.0f, 96.0f);
 
 	MoveComp = GetCharacterMovement();
+	MoveComp->JumpZVelocity = 560.0f;
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
 	AttackCollision->AttachTo(RootComponent);
