@@ -44,7 +44,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	Health = MaxHealth = 100;
+	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
 	bIsInvincible = false;
 }
@@ -112,7 +112,7 @@ void AHypercubeCharacter::MoveRight(float Value)
 	}
 }
 
-void AHypercubeCharacter::TakeDamage(int damage)
+void AHypercubeCharacter::TakeDamage(float damage)
 {
 	if (bIsInvincible)
 	{
@@ -120,7 +120,7 @@ void AHypercubeCharacter::TakeDamage(int damage)
 	}
 	Health -= damage;
 	bIsInvincible = true;
-	UE_LOG(LogTemp, Warning, TEXT("Damage: %d, Now Health: %d"), damage, Health);
+	UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), damage, Health);
 	if (Health <= 0)
 	{
 		PlayDeath();

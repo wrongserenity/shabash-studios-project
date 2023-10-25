@@ -33,10 +33,10 @@ public:
 	float BaseLookUpRate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category = Stats)
-	int Health;
+	float Health;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	int MaxHealth;
+	float MaxHealth;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float InvincAfterDamage;
@@ -76,7 +76,7 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	UFUNCTION(BlueprintCallable)
-	void TakeDamage(int damage);
+	void TakeDamage(float damage);
 
 	void OnEndInvincibility();
 
