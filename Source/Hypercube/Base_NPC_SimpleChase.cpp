@@ -31,12 +31,16 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	AttackCollision->SetVisibility(false);
 	AttackCollision->SetActive(false);
 
-	Damage = 25.0f;
-	OpenerTime = 0.7f;
-	AttackTime = 0.3f;
-	AfterAttackTime = 0.2f;
-	AttackRotationMultiplier = 7.5f;
-	Phase = AttackPhase::NotAttacking;
+	SimpleAttack = { 25.0f, 0.7f, 0.3f, 0.2f, 7.5f, 150.0f };
+
+	//Damage = 25.0f;
+	//OpenerTime = 0.7f;
+	//AttackTime = 0.3f;
+	//AfterAttackTime = 0.2f;
+	//AttackRotationMultiplier = 7.5f;
+	//AttackMoveForwardSpeed = 50.0f;
+
+	Phase = EAttackPhase::NotAttacking;
 	AttackTarget = nullptr;
 }
 
@@ -49,17 +53,13 @@ void ABase_NPC_SimpleChase::BeginPlay()
 
 void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
 {
-	if (Phase != AttackPhase::NotAttacking)
+	if (Phase != EAttackPhase::NotAttacking)
 	{
 		TickRotateToTarget(DeltaSeconds);
-	}
-	if (Phase == AttackPhase::Attacking)
-	{
-		TSet<AActor*> collisions;
-		AttackCollision->GetOverlappingActors(collisions, AHypercubeCharacter::StaticClass());
-		if (collisions.Num())
+		if (Phase == EAttackPhase::Attacking)
 		{
-			AttackTarget->TakeDamage(Damage);
+			CheckPlayerHit();
+			TickMoveForward(DeltaSeconds);
 		}
 	}
 	Super::Tick(DeltaSeconds);
@@ -70,7 +70,22 @@ void ABase_NPC_SimpleChase::TickRotateToTarget(float DeltaSeconds)
 	FVector ToTarget = AttackTarget->GetActorLocation() - GetActorLocation();
 	ToTarget.Z = 0.0f;
 	ToTarget.Normalize();
-	SetActorRotation(UKismetMathLibrary::MakeRotFromX(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * AttackRotationMultiplier)));
+	SetActorRotation(UKismetMathLibrary::MakeRotFromX(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * SimpleAttack.AttackRotationMultiplier)));
+}
+
+void ABase_NPC_SimpleChase::TickMoveForward(float DeltaSeconds)
+{
+	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds);
+}
+
+void ABase_NPC_SimpleChase::CheckPlayerHit()
+{
+	TSet<AActor*> collisions;
+	AttackCollision->GetOverlappingActors(collisions, AHypercubeCharacter::StaticClass());
+	if (collisions.Num())
+	{
+		AttackTarget->TakeDamage(SimpleAttack.Damage);
+	}
 }
 
 void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
@@ -87,22 +102,22 @@ void ABase_NPC_SimpleChase::Attack()
 	}
 	switch (Phase)
 	{
-	case AttackPhase::NotAttacking:
-		Phase = AttackPhase::Opener;
-		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, OpenerTime, false);
+	case EAttackPhase::NotAttacking:
+		Phase = EAttackPhase::Opener;
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.OpenerTime, false);
 		return;
-	case AttackPhase::Opener:
-		Phase = AttackPhase::Attacking;
+	case EAttackPhase::Opener:
+		Phase = EAttackPhase::Attacking;
 		SetAttackCollision(true);
-		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, AttackTime, false);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AttackTime, false);
 		return;
-	case AttackPhase::Attacking:
-		Phase = AttackPhase::AfterAttack;
+	case EAttackPhase::Attacking:
+		Phase = EAttackPhase::AfterAttack;
 		SetAttackCollision(false);
-		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, AfterAttackTime, false);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AfterAttackTime, false);
 		return;
-	case AttackPhase::AfterAttack:
-		Phase = AttackPhase::NotAttacking;
+	case EAttackPhase::AfterAttack:
+		Phase = EAttackPhase::NotAttacking;
 		AttackEndDelegate.Broadcast(true);
 	}
 }

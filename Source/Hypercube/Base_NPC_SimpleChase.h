@@ -4,6 +4,39 @@
 #include "GameFramework/Character.h"
 #include "Base_NPC_SimpleChase.generated.h"
 
+USTRUCT(BlueprintType)
+struct FAttackStats
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Damage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float OpenerTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AfterAttackTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackRotationMultiplier;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackMoveForwardSpeed;
+};
+
+UENUM(BlueprintType)
+enum class EAttackPhase : uint8
+{
+	NotAttacking UMETA(DisplayName="NotAttacking"),
+	Opener UMETA(DisplayName = "Opener"),
+	Attacking UMETA(DisplayName = "Attacking"),
+	AfterAttack UMETA(DisplayName = "AfterAttack")
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
 
 UCLASS()
@@ -28,34 +61,20 @@ public:
 	FOnAttackEnd AttackEndDelegate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
-	float Damage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
-	float OpenerTime;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
-	float AttackTime;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
-	float AfterAttackTime;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
-	float AttackRotationMultiplier;
+	FAttackStats SimpleAttack;
 
 protected:
 
 	FTimerHandle AttackTimerHandle;
-
-	enum class AttackPhase { NotAttacking, Opener, Attacking, AfterAttack };
-	AttackPhase Phase;
-
+	EAttackPhase Phase;
 	class AHypercubeCharacter* AttackTarget;
 
 	virtual void BeginPlay() override;
-
 	virtual void Tick(float DeltaSeconds) override;
 
 	void TickRotateToTarget(float DeltaSeconds);
+	void TickMoveForward(float DeltaSeconds);
+	void CheckPlayerHit();
 
 public:	
 
