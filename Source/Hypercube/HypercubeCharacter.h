@@ -6,6 +6,14 @@
 #include "GameFramework/Character.h"
 #include "HypercubeCharacter.generated.h"
 
+UENUM(BlueprintType)
+enum class EPlayerMovementPhase : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Walking UMETA(DisplayName = "Walking"),
+	Dashing UMETA(DisplayName = "Dashing"),
+};
+
 UCLASS(config = Game)
 class AHypercubeCharacter : public ACharacter
 {
@@ -19,8 +27,6 @@ class AHypercubeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
-	class UCharacterMovementComponent* MoveComp;
-
 public:
 	AHypercubeCharacter();
 
@@ -32,42 +38,56 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseLookUpRate;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category = Stats)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category = "Stats | Health")
 	float Health;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float MaxHealth;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category =  "Stats | Health")
 	float InvincAfterDamage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
+	float DashDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
+	float DashTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
+	float DashRecoverTime;
+
 protected:
+
+	class UCharacterMovementComponent* MoveComp;
+	class UInputComponent* InputComp;
+
+	EPlayerMovementPhase Phase;
+
+	uint8 TickSemaphore;
+
+	bool bCanDash;
+	FVector DashDestination;
+	float DashTimer;
+
+	FTimerHandle DashRecoveryTimerHandle;
 
 	bool bIsInvincible;
 	FTimerHandle InvincTimerHandle;
 
-	/** Called for forwards/backward input */
-	void MoveForward(float Value);
+protected:
 
-	/** Called for side to side input */
+	void SetTickState(bool Activate);
+	void ForceTickDisable();
+
+	void MoveForward(float Value);
 	void MoveRight(float Value);
 
-	/**
-	 * Called via input to turn at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void TurnAtRate(float Rate);
+	void Dash();
+	void StopDashing();
+	void OnEndDashRecovery();
 
-	/**
-	 * Called via input to turn look up/down at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void LookUpAtRate(float Rate);
-
-protected:
-	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	// End of APawn interface
+	virtual void Tick(float DeltaSeconds) override;
 
 public:
 	/** Returns CameraBoom subobject **/
@@ -76,7 +96,7 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	UFUNCTION(BlueprintCallable)
-	void TakeDamage(float damage);
+	void TakeDamage(float Damage);
 
 	void OnEndInvincibility();
 
