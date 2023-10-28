@@ -15,6 +15,9 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	DelayedInitTime = 0.1f;
+
+
 	bUseControllerRotationYaw = false;
 
 	Capsule = GetCapsuleComponent();
@@ -49,8 +52,43 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 // Called when the game starts or when spawned
 void ABase_NPC_SimpleChase::BeginPlay()
 {
+	GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &ABase_NPC_SimpleChase::DelayedInit, DelayedInitTime, false);
 	Super::BeginPlay();
-	
+}
+
+void ABase_NPC_SimpleChase::DelayedInit()
+{
+	AttackTarget = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	TickSemaphore = 0;
+	SetActorTickEnabled(false);
+}
+
+void ABase_NPC_SimpleChase::SetTickState(bool Activate)
+{
+	if (Activate)
+	{
+		if (++TickSemaphore == 1)
+		{
+			SetActorTickEnabled(true);
+		}
+	}
+	else
+	{
+		if (!TickSemaphore)
+		{
+			return;
+		}
+		if (--TickSemaphore == 0)
+		{
+			SetActorTickEnabled(false);
+		}
+	}
+}
+
+void ABase_NPC_SimpleChase::ForceTickDisable()
+{
+	TickSemaphore = 0;
+	SetActorTickEnabled(false);
 }
 
 void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
@@ -98,28 +136,26 @@ void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
 
 void ABase_NPC_SimpleChase::Attack()
 {
-	if (!AttackTarget)
-	{
-		AttackTarget = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	}
 	switch (Phase)
 	{
 	case EAttackPhase::NotAttacking:
 		Phase = EAttackPhase::Opener;
+		SetTickState(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.OpenerTime, false);
-		return;
+		break;
 	case EAttackPhase::Opener:
 		Phase = EAttackPhase::Attacking;
 		SetAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AttackTime, false);
-		return;
+		break;
 	case EAttackPhase::Attacking:
 		Phase = EAttackPhase::AfterAttack;
 		SetAttackCollision(false);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AfterAttackTime, false);
-		return;
+		break;
 	case EAttackPhase::AfterAttack:
 		Phase = EAttackPhase::NotAttacking;
+		SetTickState(false);
 		AttackEndDelegate.Broadcast(true);
 	}
 }

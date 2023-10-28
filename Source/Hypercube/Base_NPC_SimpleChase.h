@@ -65,9 +65,18 @@ public:
 
 protected:
 
+	uint8 TickSemaphore;
+
 	FTimerHandle AttackTimerHandle;
 	EAttackPhase Phase;
 	class AHypercubeCharacter* AttackTarget;
+
+	FTimerHandle DelayedInitTimerHandle;
+	float DelayedInitTime;
+	void DelayedInit();
+
+	void SetTickState(bool Activate);
+	void ForceTickDisable();
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;

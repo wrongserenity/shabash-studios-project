@@ -76,9 +76,6 @@ protected:
 
 protected:
 
-	void SetTickState(bool Activate);
-	void ForceTickDisable();
-
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 

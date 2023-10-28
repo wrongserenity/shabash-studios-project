@@ -94,34 +94,7 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 			StopDashing();
 		}
 	}
-}
-
-void AHypercubeCharacter::SetTickState(bool Activate)
-{
-	if (Activate)
-	{
-		if (++TickSemaphore == 1)
-		{
-			SetActorTickEnabled(true);
-		}
-	}
-	else
-	{
-		if (!TickSemaphore)
-		{
-			return;
-		}
-		if (--TickSemaphore == 0)
-		{
-			SetActorTickEnabled(false);
-		}
-	}
-}
-
-void AHypercubeCharacter::ForceTickDisable()
-{
-	TickSemaphore = 0;
-	SetActorTickEnabled(false);
+	Super::Tick(DeltaSeconds);
 }
 
 void AHypercubeCharacter::MoveForward(float Value)
@@ -170,13 +143,11 @@ void AHypercubeCharacter::Dash()
 	DashTimer = DashTime;
 	Phase = EPlayerMovementPhase::Dashing;
 	bCanDash = false;
-	SetTickState(true);
 }
 
 void AHypercubeCharacter::StopDashing()
 {
 	Phase = EPlayerMovementPhase::Walking;
-	SetTickState(false);
 	GetWorld()->GetTimerManager().SetTimer(DashRecoveryTimerHandle, this, &AHypercubeCharacter::OnEndDashRecovery, DashRecoverTime, false);
 }
 
