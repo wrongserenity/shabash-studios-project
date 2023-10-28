@@ -15,12 +15,14 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bUseControllerRotationYaw = false;
 
 	Capsule = GetCapsuleComponent();
 	Capsule->InitCapsuleSize(42.0f, 96.0f);
 
 	MoveComp = GetCharacterMovement();
 	MoveComp->JumpZVelocity = 560.0f;
+	MoveComp->bOrientRotationToMovement = true;
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
 	AttackCollision->AttachTo(RootComponent);
