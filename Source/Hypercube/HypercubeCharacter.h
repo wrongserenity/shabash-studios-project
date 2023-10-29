@@ -54,7 +54,7 @@ public:
 	float DashTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
-	float DashRecoverTime;
+	float DashCooldownTime;
 
 protected:
 
@@ -69,7 +69,7 @@ protected:
 	FVector DashDestination;
 	float DashTimer;
 
-	FTimerHandle DashRecoveryTimerHandle;
+	FTimerHandle DashCooldownTimerHandle;
 
 	bool bIsInvincible;
 	FTimerHandle InvincTimerHandle;

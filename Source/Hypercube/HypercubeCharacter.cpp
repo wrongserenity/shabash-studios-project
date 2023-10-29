@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -33,8 +34,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	MoveComp = GetCharacterMovement();
 	MoveComp->bOrientRotationToMovement = true; // Character moves in the direction of input...	
 	MoveComp->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-	MoveComp->JumpZVelocity = 600.f;
-	MoveComp->AirControl = 0.2f;
+	MoveComp->JumpZVelocity = 600.0f;
+	MoveComp->AirControl = 1.0f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -57,7 +58,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	DashDistance = 500.0f;
 	DashTime = 0.3f;
-	DashRecoverTime = 1.0f;
+	DashCooldownTime = 0.5f;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -139,16 +140,34 @@ void AHypercubeCharacter::Dash()
 	Right.Z = 0.0f;
 	Right.Normalize();
 	DashDestination = Forward * InputComp->GetAxisValue(TEXT("MoveForward")) + Right * InputComp->GetAxisValue(TEXT("MoveRight"));
-	DashDestination.Normalize();
+	if (DashDestination.IsNearlyZero())
+	{
+		DashDestination = GetActorForwardVector();
+	}
+	else
+	{
+		DashDestination.Normalize();
+	}
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(DashDestination, FVector::ZAxisVector));
 	DashTimer = DashTime;
+	MoveComp->SetMovementMode(EMovementMode::MOVE_Flying);
 	Phase = EPlayerMovementPhase::Dashing;
 	bCanDash = false;
+
+	//TSet<AActor*> collisions;
+	//GetCapsuleComponent()->GetOverlappingActors(collisions);
+	//UE_LOG(LogTemp, Warning, TEXT("%d"), collisions.Num());
+	//for (auto it = collisions.begin(); it != collisions.end(); ++it)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("%s"), *(*it)->GetName());
+	//}
 }
 
 void AHypercubeCharacter::StopDashing()
 {
+	MoveComp->SetMovementMode(EMovementMode::MOVE_Walking);
 	Phase = EPlayerMovementPhase::Walking;
-	GetWorld()->GetTimerManager().SetTimer(DashRecoveryTimerHandle, this, &AHypercubeCharacter::OnEndDashRecovery, DashRecoverTime, false);
+	GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AHypercubeCharacter::OnEndDashRecovery, DashCooldownTime, false);
 }
 
 void AHypercubeCharacter::OnEndDashRecovery()
@@ -165,7 +184,7 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 	Health -= Damage;
 	bIsInvincible = true;
 	UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
-	if (Health <= 0)
+	if (Health <= 0.0f)
 	{
 		PlayDeath();
 		return;

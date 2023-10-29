@@ -110,7 +110,7 @@ void ABase_NPC_SimpleChase::TickRotateToTarget(float DeltaSeconds)
 	FVector ToTarget = AttackTarget->GetActorLocation() - GetActorLocation();
 	ToTarget.Z = 0.0f;
 	ToTarget.Normalize();
-	SetActorRotation(UKismetMathLibrary::MakeRotFromX(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * SimpleAttack.AttackRotationMultiplier)));
+	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * SimpleAttack.AttackRotationMultiplier), FVector::ZAxisVector));
 }
 
 void ABase_NPC_SimpleChase::TickMoveForward(float DeltaSeconds)
