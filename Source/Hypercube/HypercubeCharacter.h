@@ -54,6 +54,9 @@ public:
 	float DashTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
+	float DashMoveControlTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashCooldownTime;
 
 protected:
@@ -61,11 +64,12 @@ protected:
 	class UCharacterMovementComponent* MoveComp;
 	class UInputComponent* InputComp;
 
-	EPlayerMovementPhase Phase;
+	EPlayerMovementPhase MovementPhase;
 
 	uint8 TickSemaphore;
 
 	bool bCanDash;
+	bool bDashMovementBlocked;
 	FVector DashDestination;
 	float DashTimer;
 
@@ -79,9 +83,12 @@ protected:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
+	inline float DashVelocityCurve(float x); // f(x) where int_0^1(f(x))dx = 1
+
 	void Dash();
+	void AllowMovingWhileDash();
 	void StopDashing();
-	void OnEndDashRecovery();
+	void OnEndDashCooldown();
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaSeconds) override;

@@ -9,6 +9,7 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Math/UnrealMathUtility.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -48,16 +49,18 @@ AHypercubeCharacter::AHypercubeCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	Phase = EPlayerMovementPhase::Walking;
+	MovementPhase = EPlayerMovementPhase::Walking;
 
 	bCanDash = true;
+	bDashMovementBlocked = true;
 
 	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
 	bIsInvincible = false;
 
-	DashDistance = 500.0f;
-	DashTime = 0.3f;
+	DashDistance = 700.0f;
+	DashTime = 0.2f;
+	DashMoveControlTime = 0.1f;
 	DashCooldownTime = 0.5f;
 }
 
@@ -86,11 +89,15 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 void AHypercubeCharacter::Tick(float DeltaSeconds)
 {
-	if (Phase == EPlayerMovementPhase::Dashing)
+	if (MovementPhase == EPlayerMovementPhase::Dashing)
 	{
-		AddActorWorldOffset(DashDestination * (DashDistance / DashTime) * DeltaSeconds);
-		DashTimer -= DeltaSeconds;
-		if (DashTimer <= 0.0f)
+		AddActorWorldOffset(DashDestination * (DashDistance / DashTime) * DashVelocityCurve(DashTimer / DashTime) * DeltaSeconds, true);
+		DashTimer += DeltaSeconds;
+		if (bDashMovementBlocked && DashTime - DashTimer <= DashMoveControlTime)
+		{
+			AllowMovingWhileDash();
+		}
+		if (DashTimer >= DashTime)
 		{
 			StopDashing();
 		}
@@ -100,7 +107,7 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 
 void AHypercubeCharacter::MoveForward(float Value)
 {
-	if ((Controller != nullptr) && (Value != 0.0f) && (Phase == EPlayerMovementPhase::Walking))
+	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -114,7 +121,7 @@ void AHypercubeCharacter::MoveForward(float Value)
 
 void AHypercubeCharacter::MoveRight(float Value)
 {
-	if ((Controller != nullptr) && (Value != 0.0f) && (Phase == EPlayerMovementPhase::Walking))
+	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -127,10 +134,18 @@ void AHypercubeCharacter::MoveRight(float Value)
 	}
 }
 
+float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x))dx = 1
+{
+	return (x >= 0.0f && x <= 1.0f) ? (PI / 2.0f) * FMath::Sin(PI * x) : 0.0f;
+	//return (x < 0.5f ? 4.0f * x : 4.0f - 4.0f * x);
+	//return 1.0;
+}
+
 void AHypercubeCharacter::Dash()
 {
-	if (!bCanDash || Phase == EPlayerMovementPhase::None)
+	if (!bCanDash || MovementPhase == EPlayerMovementPhase::None)
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
 	}
 	FVector Forward = FollowCamera->GetForwardVector();
@@ -149,9 +164,9 @@ void AHypercubeCharacter::Dash()
 		DashDestination.Normalize();
 	}
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(DashDestination, FVector::ZAxisVector));
-	DashTimer = DashTime;
-	MoveComp->SetMovementMode(EMovementMode::MOVE_Flying);
-	Phase = EPlayerMovementPhase::Dashing;
+	DashTimer = 0.0f;
+	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
+	MovementPhase = EPlayerMovementPhase::Dashing;
 	bCanDash = false;
 
 	//TSet<AActor*> collisions;
@@ -163,15 +178,24 @@ void AHypercubeCharacter::Dash()
 	//}
 }
 
+void AHypercubeCharacter::AllowMovingWhileDash()
+{
+	bDashMovementBlocked = false;
+	MoveComp->SetMovementMode(EMovementMode::MOVE_Flying);
+}
+
 void AHypercubeCharacter::StopDashing()
 {
 	MoveComp->SetMovementMode(EMovementMode::MOVE_Walking);
-	Phase = EPlayerMovementPhase::Walking;
-	GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AHypercubeCharacter::OnEndDashRecovery, DashCooldownTime, false);
+	MovementPhase = EPlayerMovementPhase::Walking;
+	bDashMovementBlocked = true;
+	//UE_LOG(LogTemp, Warning, TEXT("End of dash"));
+	GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AHypercubeCharacter::OnEndDashCooldown, DashCooldownTime, false);
 }
 
-void AHypercubeCharacter::OnEndDashRecovery()
+void AHypercubeCharacter::OnEndDashCooldown()
 {
+	//UE_LOG(LogTemp, Warning, TEXT("End of dash cooldown"));
 	bCanDash = true;
 }
 
@@ -199,6 +223,6 @@ void AHypercubeCharacter::OnEndInvincibility()
 
 void AHypercubeCharacter::PlayDeath()
 {
-	Phase = EPlayerMovementPhase::None;
+	MovementPhase = EPlayerMovementPhase::None;
 	bCanDash = false;
 }
