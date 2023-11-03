@@ -60,6 +60,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float Health;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float MaxHealth;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
 
@@ -91,5 +97,11 @@ public:
 	void SetAttackCollision(bool Active);
 
 	UFUNCTION(BlueprintCallable)
+	void TakeDamage(float Damage);
+
+	UFUNCTION(BlueprintCallable)
 	void Attack();
+
+	UFUNCTION(BlueprintCallable)
+	void PlayDeath();
 };

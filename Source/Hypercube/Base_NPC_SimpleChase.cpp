@@ -27,6 +27,8 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	MoveComp->JumpZVelocity = 560.0f;
 	MoveComp->bOrientRotationToMovement = true;
 
+	Health = MaxHealth = 100.0f;
+
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
 	AttackCollision->AttachTo(RootComponent);
 	AttackCollision->SetRelativeLocation(FVector(80.0f, 0.0f, 20.0f));
@@ -115,7 +117,7 @@ void ABase_NPC_SimpleChase::TickRotateToTarget(float DeltaSeconds)
 
 void ABase_NPC_SimpleChase::TickMoveForward(float DeltaSeconds)
 {
-	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds);
+	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds, true);
 }
 
 void ABase_NPC_SimpleChase::CheckPlayerHit()
@@ -132,6 +134,15 @@ void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
 {
 	AttackCollision->SetVisibility(Active);
 	AttackCollision->SetActive(Active);
+}
+
+void ABase_NPC_SimpleChase::TakeDamage(float Damage)
+{
+	Health -= Damage;
+	if (Health <= 0.0f)
+	{
+		PlayDeath();
+	}
 }
 
 void ABase_NPC_SimpleChase::Attack()
@@ -158,4 +169,9 @@ void ABase_NPC_SimpleChase::Attack()
 		SetTickState(false);
 		AttackEndDelegate.Broadcast(true);
 	}
+}
+
+void ABase_NPC_SimpleChase::PlayDeath()
+{
+	Destroy();
 }

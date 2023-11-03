@@ -7,11 +7,41 @@
 #include "HypercubeCharacter.generated.h"
 
 UENUM(BlueprintType)
-enum class EPlayerMovementPhase : uint8
+enum class EPlayerPhase : uint8
 {
 	None UMETA(DisplayName = "None"),
 	Walking UMETA(DisplayName = "Walking"),
 	Dashing UMETA(DisplayName = "Dashing"),
+	AttackOpener UMETA(DisplayName = "Opener"),
+	Attacking UMETA(DisplayName = "Attacking"),
+	AfterAttack UMETA(DisplayName = "AfterAttack")
+};
+
+USTRUCT(BlueprintType)
+struct FPlayerAttackStats
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Damage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float OpenerTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AfterAttackTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackMoveForwardSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackRadius;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackAngle;
 };
 
 UCLASS(config = Game)
@@ -26,6 +56,12 @@ class AHypercubeCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* AttackCollision;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* Debug_AttackCollision;
 
 public:
 	AHypercubeCharacter();
@@ -59,12 +95,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashCooldownTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
+	FPlayerAttackStats SimpleAttack;
+
 protected:
 
 	class UCharacterMovementComponent* MoveComp;
 	class UInputComponent* InputComp;
 
-	EPlayerMovementPhase MovementPhase;
+	EPlayerPhase Phase;
 
 	uint8 TickSemaphore;
 
@@ -78,6 +117,10 @@ protected:
 	bool bIsInvincible;
 	FTimerHandle InvincTimerHandle;
 
+	FTimerHandle AttackTimerHandle;
+
+	TSet<class ABase_NPC_SimpleChase*> Enemies;
+
 protected:
 
 	void MoveForward(float Value);
@@ -90,8 +133,15 @@ protected:
 	void StopDashing();
 	void OnEndDashCooldown();
 
+	void SetAttackCollision(bool Activate);
+	void SetDebugAttackCollision(bool Activate);
+	void Attack();
+
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	void DashTick(float DeltaSeconds);
+	void AttackTick();
 
 public:
 	/** Returns CameraBoom subobject **/
