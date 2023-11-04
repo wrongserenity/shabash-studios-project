@@ -33,19 +33,12 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	AttackCollision->AttachTo(RootComponent);
 	AttackCollision->SetRelativeLocation(FVector(80.0f, 0.0f, 20.0f));
 	AttackCollision->SetWorldScale3D(FVector(1.8f, 1.0f, 1.0f));
-	AttackCollision->SetGenerateOverlapEvents(true);
+	AttackCollision->SetGenerateOverlapEvents(false);
 	AttackCollision->SetHiddenInGame(false);
 	AttackCollision->SetVisibility(false);
 	AttackCollision->SetActive(false);
 
 	SimpleAttack = { 25.0f, 0.7f, 0.3f, 0.2f, 7.5f, 150.0f };
-
-	//Damage = 25.0f;
-	//OpenerTime = 0.7f;
-	//AttackTime = 0.3f;
-	//AfterAttackTime = 0.2f;
-	//AttackRotationMultiplier = 7.5f;
-	//AttackMoveForwardSpeed = 50.0f;
 
 	Phase = EAttackPhase::NotAttacking;
 	AttackTarget = nullptr;
@@ -145,6 +138,11 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 	}
 }
 
+void ABase_NPC_SimpleChase::OnNotice()
+{
+	AttackTarget->AddChasingDamageMultiplier(this);
+}
+
 void ABase_NPC_SimpleChase::Attack()
 {
 	switch (Phase)
@@ -173,5 +171,6 @@ void ABase_NPC_SimpleChase::Attack()
 
 void ABase_NPC_SimpleChase::PlayDeath()
 {
+	AttackTarget->RemoveChasingDamageMultiplier(this);
 	Destroy();
 }

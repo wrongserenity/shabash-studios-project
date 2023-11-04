@@ -12,7 +12,7 @@ enum class EPlayerPhase : uint8
 	None UMETA(DisplayName = "None"),
 	Walking UMETA(DisplayName = "Walking"),
 	Dashing UMETA(DisplayName = "Dashing"),
-	AttackOpener UMETA(DisplayName = "Opener"),
+	AttackOpener UMETA(DisplayName = "AttackOpener"),
 	Attacking UMETA(DisplayName = "Attacking"),
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
@@ -95,6 +95,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashCooldownTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
+	float DamageMultiplierEnemyCost;
+
+	UPROPERTY(BlueprintReadOnly)
+	float DamageMulptiplier;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FPlayerAttackStats SimpleAttack;
 
@@ -119,7 +125,9 @@ protected:
 
 	FTimerHandle AttackTimerHandle;
 
-	TSet<class ABase_NPC_SimpleChase*> Enemies;
+	TSet<class ABase_NPC_SimpleChase*> AttackEnemiesCollided;
+
+	TSet<class ABase_NPC_SimpleChase*> EnemyChasing;
 
 protected:
 
@@ -156,5 +164,14 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateDamageMultiplier();
+
+	UFUNCTION(BlueprintCallable)
+	void AddChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy);
 };
 

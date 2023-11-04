@@ -65,12 +65,18 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DashMoveControlTime = 0.1f;
 	DashCooldownTime = 0.5f;
 
+	DamageMultiplierEnemyCost = 0.5f;
+	EnemyChasing.Empty();
+	DamageMulptiplier = 1.0f;
+
+
 	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
 	AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
 	AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
+	AttackCollision->SetGenerateOverlapEvents(false);
 	AttackCollision->SetHiddenInGame(false);
 	AttackCollision->SetVisibility(false);
 
@@ -78,6 +84,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Debug_AttackCollision->SetupAttachment(RootComponent);
 	Debug_AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
 	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
+	Debug_AttackCollision->SetGenerateOverlapEvents(false);
 	Debug_AttackCollision->SetHiddenInGame(false);
 	Debug_AttackCollision->SetVisibility(false);
 }
@@ -141,11 +148,11 @@ void AHypercubeCharacter::AttackTick()
 	for (auto it = collisions.begin(); it != collisions.end(); ++it)
 	{
 		ABase_NPC_SimpleChase* tmp = Cast<ABase_NPC_SimpleChase>(*it);
-		if (!Enemies.Contains(tmp))
+		if (!AttackEnemiesCollided.Contains(tmp))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
-			tmp->TakeDamage(SimpleAttack.Damage);
-			Enemies.Add(tmp);
+			tmp->TakeDamage(SimpleAttack.Damage * DamageMulptiplier);
+			AttackEnemiesCollided.Add(tmp);
 		}
 	}
 }
@@ -268,7 +275,7 @@ void AHypercubeCharacter::Attack()
 		break;
 	case EPlayerPhase::AttackOpener:
 		Phase = EPlayerPhase::Attacking;
-		Enemies.Empty();
+		AttackEnemiesCollided.Empty();
 		SetDebugAttackCollision(false);
 		SetAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.AttackTime, false);
@@ -310,4 +317,27 @@ void AHypercubeCharacter::PlayDeath()
 	Phase = EPlayerPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
+}
+
+void AHypercubeCharacter::UpdateDamageMultiplier()
+{
+	DamageMulptiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+}
+
+void AHypercubeCharacter::AddChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy)
+{
+	if (!EnemyChasing.Contains(Enemy))
+	{
+		EnemyChasing.Add(Enemy);
+		UpdateDamageMultiplier();
+	}
+}
+
+void AHypercubeCharacter::RemoveChasingDamageMultiplier(ABase_NPC_SimpleChase* Enemy)
+{
+	if (EnemyChasing.Contains(Enemy))
+	{
+		EnemyChasing.Remove(Enemy);
+		UpdateDamageMultiplier();
+	}
 }

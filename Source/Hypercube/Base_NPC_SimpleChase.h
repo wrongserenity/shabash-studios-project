@@ -100,6 +100,9 @@ public:
 	void TakeDamage(float Damage);
 
 	UFUNCTION(BlueprintCallable)
+	void OnNotice();
+
+	UFUNCTION(BlueprintCallable)
 	void Attack();
 
 	UFUNCTION(BlueprintCallable)
