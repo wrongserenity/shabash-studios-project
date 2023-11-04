@@ -26,6 +26,12 @@ struct FAttackStats
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackMoveForwardSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackLength;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackWidth;
 };
 
 UENUM(BlueprintType)
@@ -44,18 +50,24 @@ class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
 {
 	GENERATED_BODY()
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class UCapsuleComponent* Capsule;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	class UCharacterMovementComponent* MoveComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* AttackCollision;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* Debug_AttackCollision;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* Debug_DamageIndicator;
+
 public:
 
 	ABase_NPC_SimpleChase();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
-	class UCapsuleComponent* Capsule;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
-	class UCharacterMovementComponent* MoveComp;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
-	class UBoxComponent* AttackCollision;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;
@@ -68,6 +80,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	float Debug_DamageIndicatorTime;
 
 protected:
 
@@ -91,10 +106,17 @@ protected:
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
 
+	FTimerHandle Debug_DamageIndicatorTimerHandle;
+	void ActivateDebugDamageIndicator();
+	void OnEndDebugDamageIndicatorTimer();
+
 public:	
 
 	UFUNCTION(BlueprintCallable)
 	void SetAttackCollision(bool Active);
+
+	UFUNCTION(BlueprintCallable)
+	void SetDebugAttackCollision(bool Active);
 
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);

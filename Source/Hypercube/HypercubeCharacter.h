@@ -63,6 +63,9 @@ class AHypercubeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* Debug_AttackCollision;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UStaticMeshComponent* Debug_DamageIndicator;
+
 public:
 	AHypercubeCharacter();
 
@@ -104,6 +107,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FPlayerAttackStats SimpleAttack;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	float Debug_DamageIndicatorTime;
+
 protected:
 
 	class UCharacterMovementComponent* MoveComp;
@@ -129,6 +135,8 @@ protected:
 
 	TSet<class ABase_NPC_SimpleChase*> EnemyChasing;
 
+	FTimerHandle Debug_DamageIndicatorTimerHandle;
+
 protected:
 
 	void MoveForward(float Value);
@@ -144,6 +152,9 @@ protected:
 	void SetAttackCollision(bool Activate);
 	void SetDebugAttackCollision(bool Activate);
 	void Attack();
+
+	void ActivateDebugDamageIndicator();
+	void OnEndDebugDamageIndicatorTimer();
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaSeconds) override;

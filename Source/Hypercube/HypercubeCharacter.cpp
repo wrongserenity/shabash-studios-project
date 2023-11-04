@@ -12,6 +12,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "Components/BoxComponent.h"
 #include "Base_NPC_SimpleChase.h"
+#include "Components/StaticMeshComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -84,9 +85,18 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Debug_AttackCollision->SetupAttachment(RootComponent);
 	Debug_AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
 	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
-	Debug_AttackCollision->SetGenerateOverlapEvents(false);
+	Debug_AttackCollision->SetGenerateOverlapEvents(true);
 	Debug_AttackCollision->SetHiddenInGame(false);
 	Debug_AttackCollision->SetVisibility(false);
+
+	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
+	Debug_DamageIndicator->SetupAttachment(RootComponent);
+	Debug_DamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+	Debug_DamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Debug_DamageIndicator->SetGenerateOverlapEvents(false);
+	Debug_DamageIndicator->SetVisibility(false);
+
+	Debug_DamageIndicatorTime = 3.0f;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -148,7 +158,7 @@ void AHypercubeCharacter::AttackTick()
 	for (auto it = collisions.begin(); it != collisions.end(); ++it)
 	{
 		ABase_NPC_SimpleChase* tmp = Cast<ABase_NPC_SimpleChase>(*it);
-		if (!AttackEnemiesCollided.Contains(tmp))
+		if (tmp && !AttackEnemiesCollided.Contains(tmp))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
 			tmp->TakeDamage(SimpleAttack.Damage * DamageMulptiplier);
@@ -283,11 +293,28 @@ void AHypercubeCharacter::Attack()
 	case EPlayerPhase::Attacking:
 		Phase = EPlayerPhase::AfterAttack;
 		SetAttackCollision(false);
+		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.AfterAttackTime, false);
 		break;
 	case EPlayerPhase::AfterAttack:
 		Phase = EPlayerPhase::Walking;
+		SetDebugAttackCollision(false);
 	}
+}
+
+void AHypercubeCharacter::ActivateDebugDamageIndicator()
+{
+	Debug_DamageIndicator->SetVisibility(true);
+	if (GetWorld()->GetTimerManager().IsTimerActive(Debug_DamageIndicatorTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(Debug_DamageIndicatorTimerHandle);
+	}
+	GetWorld()->GetTimerManager().SetTimer(Debug_DamageIndicatorTimerHandle, this, &AHypercubeCharacter::OnEndDebugDamageIndicatorTimer, Debug_DamageIndicatorTime, false);
+}
+
+void AHypercubeCharacter::OnEndDebugDamageIndicatorTimer()
+{
+	Debug_DamageIndicator->SetVisibility(false);
 }
 
 void AHypercubeCharacter::TakeDamage(float Damage)
@@ -297,8 +324,9 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		return;
 	}
 	Health -= Damage;
+	ActivateDebugDamageIndicator();
 	bIsInvincible = true;
-	UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
+	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
