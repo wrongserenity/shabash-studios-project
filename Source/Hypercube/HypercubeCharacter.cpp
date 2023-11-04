@@ -52,7 +52,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	Phase = EPlayerPhase::Walking;
+	MovementPhase = EPlayerMovementPhase::Walking;
+	AttackPhase = EPlayerAttackPhase::None;
 
 	bCanDash = true;
 	bDashMovementBlocked = true;
@@ -112,7 +113,7 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AHypercubeCharacter::Dash);
 
-	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AHypercubeCharacter::Attack);
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AHypercubeCharacter::ReceiveAttackInput);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AHypercubeCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AHypercubeCharacter::MoveRight);
@@ -126,11 +127,11 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 void AHypercubeCharacter::Tick(float DeltaSeconds)
 {
-	if (Phase == EPlayerPhase::Dashing)
+	if (MovementPhase == EPlayerMovementPhase::Dashing)
 	{
 		DashTick(DeltaSeconds);
 	}
-	if (Phase == EPlayerPhase::Attacking)
+	if (AttackPhase == EPlayerAttackPhase::Attacking)
 	{
 		AttackTick();
 	}
@@ -205,7 +206,7 @@ float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x)
 
 void AHypercubeCharacter::Dash()
 {
-	if (!bCanDash || Phase != EPlayerPhase::Walking)
+	if (!bCanDash || MovementPhase != EPlayerMovementPhase::Walking)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
@@ -228,7 +229,7 @@ void AHypercubeCharacter::Dash()
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(DashDestination, FVector::ZAxisVector));
 	DashTimer = 0.0f;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
-	Phase = EPlayerPhase::Dashing;
+	MovementPhase = EPlayerMovementPhase::Dashing;
 	bCanDash = false;
 
 	//TSet<AActor*> collisions;
@@ -249,7 +250,7 @@ void AHypercubeCharacter::AllowMovingWhileDash()
 void AHypercubeCharacter::StopDashing()
 {
 	MoveComp->SetMovementMode(EMovementMode::MOVE_Walking);
-	Phase = EPlayerPhase::Walking;
+	MovementPhase = EPlayerMovementPhase::Walking;
 	bDashMovementBlocked = true;
 	//UE_LOG(LogTemp, Warning, TEXT("End of dash"));
 	GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AHypercubeCharacter::OnEndDashCooldown, DashCooldownTime, false);
@@ -273,33 +274,48 @@ void AHypercubeCharacter::SetDebugAttackCollision(bool Activate)
 	Debug_AttackCollision->SetActive(Activate);
 }
 
+void AHypercubeCharacter::ReceiveAttackInput()
+{
+	if (MovementPhase != EPlayerMovementPhase::Walking)
+	{
+		return;
+	}
+	MovementPhase = EPlayerMovementPhase::Attacking;
+	Attack();
+}
+
 void AHypercubeCharacter::Attack()
 {
-	switch (Phase)
+	switch (AttackPhase)
 	{
-	case EPlayerPhase::None:
-	case EPlayerPhase::Walking:
-		Phase = EPlayerPhase::AttackOpener;
+	case EPlayerAttackPhase::None:
+		AttackPhase = EPlayerAttackPhase::Opener;
 		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.OpenerTime, false);
 		break;
-	case EPlayerPhase::AttackOpener:
-		Phase = EPlayerPhase::Attacking;
+	case EPlayerAttackPhase::Opener:
+		AttackPhase = EPlayerAttackPhase::Attacking;
 		AttackEnemiesCollided.Empty();
 		SetDebugAttackCollision(false);
 		SetAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.AttackTime, false);
 		break;
-	case EPlayerPhase::Attacking:
-		Phase = EPlayerPhase::AfterAttack;
+	case EPlayerAttackPhase::Attacking:
+		AttackPhase = EPlayerAttackPhase::AfterAttack;
 		SetAttackCollision(false);
 		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.AfterAttackTime, false);
 		break;
-	case EPlayerPhase::AfterAttack:
-		Phase = EPlayerPhase::Walking;
+	case EPlayerAttackPhase::AfterAttack:
+		AttackPhase = EPlayerAttackPhase::None;
 		SetDebugAttackCollision(false);
+		OnEndAttack();
 	}
+}
+
+void AHypercubeCharacter::OnEndAttack()
+{
+	MovementPhase = EPlayerMovementPhase::Walking;
 }
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
@@ -342,7 +358,7 @@ void AHypercubeCharacter::OnEndInvincibility()
 
 void AHypercubeCharacter::PlayDeath()
 {
-	Phase = EPlayerPhase::None;
+	MovementPhase = EPlayerMovementPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
 }

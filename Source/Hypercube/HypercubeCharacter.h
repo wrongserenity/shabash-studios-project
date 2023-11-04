@@ -7,12 +7,19 @@
 #include "HypercubeCharacter.generated.h"
 
 UENUM(BlueprintType)
-enum class EPlayerPhase : uint8
+enum class EPlayerMovementPhase : uint8
 {
 	None UMETA(DisplayName = "None"),
 	Walking UMETA(DisplayName = "Walking"),
 	Dashing UMETA(DisplayName = "Dashing"),
-	AttackOpener UMETA(DisplayName = "AttackOpener"),
+	Attacking UMETA(DisplayName = "Attacking")
+};
+
+UENUM(BlueprintType)
+enum class EPlayerAttackPhase : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Opener UMETA(DisplayName = "AttackOpener"),
 	Attacking UMETA(DisplayName = "Attacking"),
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
@@ -115,7 +122,8 @@ protected:
 	class UCharacterMovementComponent* MoveComp;
 	class UInputComponent* InputComp;
 
-	EPlayerPhase Phase;
+	EPlayerMovementPhase MovementPhase;
+	EPlayerAttackPhase AttackPhase;
 
 	uint8 TickSemaphore;
 
@@ -151,7 +159,9 @@ protected:
 
 	void SetAttackCollision(bool Activate);
 	void SetDebugAttackCollision(bool Activate);
+	void ReceiveAttackInput();
 	void Attack();
+	void OnEndAttack();
 
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
