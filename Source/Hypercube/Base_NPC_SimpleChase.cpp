@@ -9,6 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
+#include "Components/SphereComponent.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -27,6 +28,13 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	MoveComp->bOrientRotationToMovement = true;
 
 	Health = MaxHealth = 100.0f;
+
+	AggroRadius = 400.0f;
+
+	NoticeCollision = CreateAbstractDefaultSubobject<USphereComponent>(TEXT("Notice Collision"));
+	NoticeCollision->AttachTo(RootComponent);
+	NoticeCollision->SetSphereRadius(AggroRadius);
+	NoticeCollision->SetGenerateOverlapEvents(false);
 
 	SimpleAttack = { 25.0f, 0.7f, 0.3f, 0.2f, 7.5f, 150.0f, 75.0f, 35.0f };
 
@@ -71,6 +79,7 @@ void ABase_NPC_SimpleChase::BeginPlay()
 void ABase_NPC_SimpleChase::DelayedInit()
 {
 	AttackTarget = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	NoticeCollision->SetGenerateOverlapEvents(true);
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
 }
