@@ -10,6 +10,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Math/UnrealMathUtility.h"
+#include "Components/BoxComponent.h"
+#include "Base_NPC_SimpleChase.h"
+#include "Components/StaticMeshComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -50,6 +53,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	MovementPhase = EPlayerMovementPhase::Walking;
+	AttackPhase = EPlayerAttackPhase::None;
 
 	bCanDash = true;
 	bDashMovementBlocked = true;
@@ -62,6 +66,38 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DashTime = 0.2f;
 	DashMoveControlTime = 0.1f;
 	DashCooldownTime = 0.5f;
+
+	DamageMultiplierEnemyCost = 0.5f;
+	EnemyChasing.Empty();
+	DamageMulptiplier = 1.0f;
+
+
+	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
+
+	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
+	AttackCollision->SetupAttachment(RootComponent);
+	AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
+	AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
+	AttackCollision->SetGenerateOverlapEvents(false);
+	AttackCollision->SetHiddenInGame(false);
+	AttackCollision->SetVisibility(false);
+
+	Debug_AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Debug Attack Collision"));
+	Debug_AttackCollision->SetupAttachment(RootComponent);
+	Debug_AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
+	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
+	Debug_AttackCollision->SetGenerateOverlapEvents(true);
+	Debug_AttackCollision->SetHiddenInGame(false);
+	Debug_AttackCollision->SetVisibility(false);
+
+	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
+	Debug_DamageIndicator->SetupAttachment(RootComponent);
+	Debug_DamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+	Debug_DamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Debug_DamageIndicator->SetGenerateOverlapEvents(false);
+	Debug_DamageIndicator->SetVisibility(false);
+
+	Debug_DamageIndicatorTime = 3.0f;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -77,6 +113,8 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AHypercubeCharacter::Dash);
 
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AHypercubeCharacter::ReceiveAttackInput);
+
 	PlayerInputComponent->BindAxis("MoveForward", this, &AHypercubeCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AHypercubeCharacter::MoveRight);
 
@@ -91,18 +129,43 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 {
 	if (MovementPhase == EPlayerMovementPhase::Dashing)
 	{
-		AddActorWorldOffset(DashDestination * (DashDistance / DashTime) * DashVelocityCurve(DashTimer / DashTime) * DeltaSeconds, true);
-		DashTimer += DeltaSeconds;
-		if (bDashMovementBlocked && DashTime - DashTimer <= DashMoveControlTime)
-		{
-			AllowMovingWhileDash();
-		}
-		if (DashTimer >= DashTime)
-		{
-			StopDashing();
-		}
+		DashTick(DeltaSeconds);
+	}
+	if (AttackPhase == EPlayerAttackPhase::Attacking)
+	{
+		AttackTick();
 	}
 	Super::Tick(DeltaSeconds);
+}
+
+void AHypercubeCharacter::DashTick(float DeltaSeconds)
+{
+	AddActorWorldOffset(DashDestination * (DashDistance / DashTime) * DashVelocityCurve(DashTimer / DashTime) * DeltaSeconds, true);
+	DashTimer += DeltaSeconds;
+	if (bDashMovementBlocked && DashTime - DashTimer <= DashMoveControlTime)
+	{
+		AllowMovingWhileDash();
+	}
+	if (DashTimer >= DashTime)
+	{
+		StopDashing();
+	}
+}
+
+void AHypercubeCharacter::AttackTick()
+{
+	TSet<AActor*> collisions;
+	AttackCollision->GetOverlappingActors(collisions, ABase_NPC_SimpleChase::StaticClass());
+	for (auto it = collisions.begin(); it != collisions.end(); ++it)
+	{
+		ABase_NPC_SimpleChase* tmp = Cast<ABase_NPC_SimpleChase>(*it);
+		if (tmp && !AttackEnemiesCollided.Contains(tmp))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
+			tmp->TakeDamage(SimpleAttack.Damage * DamageMulptiplier);
+			AttackEnemiesCollided.Add(tmp);
+		}
+	}
 }
 
 void AHypercubeCharacter::MoveForward(float Value)
@@ -143,7 +206,7 @@ float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x)
 
 void AHypercubeCharacter::Dash()
 {
-	if (!bCanDash || MovementPhase == EPlayerMovementPhase::None)
+	if (!bCanDash || MovementPhase != EPlayerMovementPhase::Walking)
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
@@ -199,6 +262,77 @@ void AHypercubeCharacter::OnEndDashCooldown()
 	bCanDash = true;
 }
 
+void AHypercubeCharacter::SetAttackCollision(bool Activate)
+{
+	AttackCollision->SetVisibility(Activate);
+	AttackCollision->SetActive(Activate);
+}
+
+void AHypercubeCharacter::SetDebugAttackCollision(bool Activate)
+{
+	Debug_AttackCollision->SetVisibility(Activate);
+	Debug_AttackCollision->SetActive(Activate);
+}
+
+void AHypercubeCharacter::ReceiveAttackInput()
+{
+	if (MovementPhase != EPlayerMovementPhase::Walking)
+	{
+		return;
+	}
+	MovementPhase = EPlayerMovementPhase::Attacking;
+	Attack();
+}
+
+void AHypercubeCharacter::Attack()
+{
+	switch (AttackPhase)
+	{
+	case EPlayerAttackPhase::None:
+		AttackPhase = EPlayerAttackPhase::Opener;
+		SetDebugAttackCollision(true);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.OpenerTime, false);
+		break;
+	case EPlayerAttackPhase::Opener:
+		AttackPhase = EPlayerAttackPhase::Attacking;
+		AttackEnemiesCollided.Empty();
+		SetDebugAttackCollision(false);
+		SetAttackCollision(true);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.AttackTime, false);
+		break;
+	case EPlayerAttackPhase::Attacking:
+		AttackPhase = EPlayerAttackPhase::AfterAttack;
+		SetAttackCollision(false);
+		SetDebugAttackCollision(true);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &AHypercubeCharacter::Attack, SimpleAttack.AfterAttackTime, false);
+		break;
+	case EPlayerAttackPhase::AfterAttack:
+		AttackPhase = EPlayerAttackPhase::None;
+		SetDebugAttackCollision(false);
+		OnEndAttack();
+	}
+}
+
+void AHypercubeCharacter::OnEndAttack()
+{
+	MovementPhase = EPlayerMovementPhase::Walking;
+}
+
+void AHypercubeCharacter::ActivateDebugDamageIndicator()
+{
+	Debug_DamageIndicator->SetVisibility(true);
+	if (GetWorld()->GetTimerManager().IsTimerActive(Debug_DamageIndicatorTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(Debug_DamageIndicatorTimerHandle);
+	}
+	GetWorld()->GetTimerManager().SetTimer(Debug_DamageIndicatorTimerHandle, this, &AHypercubeCharacter::OnEndDebugDamageIndicatorTimer, Debug_DamageIndicatorTime, false);
+}
+
+void AHypercubeCharacter::OnEndDebugDamageIndicatorTimer()
+{
+	Debug_DamageIndicator->SetVisibility(false);
+}
+
 void AHypercubeCharacter::TakeDamage(float Damage)
 {
 	if (bIsInvincible)
@@ -206,8 +340,9 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		return;
 	}
 	Health -= Damage;
+	ActivateDebugDamageIndicator();
 	bIsInvincible = true;
-	UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
+	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -224,5 +359,29 @@ void AHypercubeCharacter::OnEndInvincibility()
 void AHypercubeCharacter::PlayDeath()
 {
 	MovementPhase = EPlayerMovementPhase::None;
+	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
+}
+
+void AHypercubeCharacter::UpdateDamageMultiplier()
+{
+	DamageMulptiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+}
+
+void AHypercubeCharacter::AddChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy)
+{
+	if (!EnemyChasing.Contains(Enemy))
+	{
+		EnemyChasing.Add(Enemy);
+		UpdateDamageMultiplier();
+	}
+}
+
+void AHypercubeCharacter::RemoveChasingDamageMultiplier(ABase_NPC_SimpleChase* Enemy)
+{
+	if (EnemyChasing.Contains(Enemy))
+	{
+		EnemyChasing.Remove(Enemy);
+		UpdateDamageMultiplier();
+	}
 }
