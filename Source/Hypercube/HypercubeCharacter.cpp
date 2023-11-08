@@ -13,6 +13,8 @@
 #include "Components/BoxComponent.h"
 #include "Base_NPC_SimpleChase.h"
 #include "Components/StaticMeshComponent.h"
+#include "Base_LevelController.h"
+#include "Kismet/GameplayStatics.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -101,10 +103,41 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Debug_DamageIndicator->SetVisibility(false);
 
 	Debug_DamageIndicatorTime = 3.0f;
+
+	//DelayedInitTime = 0.2f;
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Input
+void AHypercubeCharacter::BeginPlay()
+{
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+	if (FoundActors.Num())
+	{
+		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+		LevelController->SetPlayerCharacter(this);
+	}
+	else
+	{
+		LevelController = nullptr;
+	}
+	Super::BeginPlay();
+	//GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &AHypercubeCharacter::DelayedInit, DelayedInitTime, false);
+}
+
+//void AHypercubeCharacter::DelayedInit()
+//{
+//	TArray<AActor*> FoundActors;
+//	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+//	if (FoundActors.Num())
+//	{
+//		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+//		LevelController->SetPlayerCharacter(this);
+//	}
+//	else
+//	{
+//		LevelController = nullptr;
+//	}
+//}
 
 void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -367,6 +400,7 @@ void AHypercubeCharacter::PlayDeath()
 	MovementPhase = EPlayerMovementPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
+	LevelController->OnPlayerDeath();
 	PlayerDeathDelegate.Broadcast();
 }
 
@@ -387,6 +421,11 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
 	Score += BaseScoreForEnemy * DamageMulptiplier;
+	if (LevelController)
+	{
+		LevelController->RemoveEnemy(Enemy);
+		LevelController->UpdateMaxMultiplicator(DamageMulptiplier);
+	}
 	if (EnemyChasing.Contains(Enemy))
 	{
 		EnemyChasing.Remove(Enemy);

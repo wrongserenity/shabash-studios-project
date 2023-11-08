@@ -10,7 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
 #include "Components/SphereComponent.h"
-//#include "Blueprint/AIBlueprintHelperLibrary.h"
+#include "Base_LevelController.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -85,6 +85,18 @@ void ABase_NPC_SimpleChase::DelayedInit()
 	NoticeCollision->SetGenerateOverlapEvents(true);
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
+
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+	if (FoundActors.Num())
+	{
+		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+		LevelController->AddEnemy(this);
+	}
+	else
+	{
+		LevelController = nullptr;
+	}
 }
 
 void ABase_NPC_SimpleChase::SetTickState(bool Activate)

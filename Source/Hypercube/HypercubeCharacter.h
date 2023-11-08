@@ -81,6 +81,9 @@ class AHypercubeCharacter : public ACharacter
 public:
 	AHypercubeCharacter();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class ABase_LevelController* LevelController;
+
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnPlayerDeath PlayerDeathDelegate;
 
@@ -161,6 +164,10 @@ protected:
 
 protected:
 
+	//FTimerHandle DelayedInitTimerHandle;
+	//float DelayedInitTime;
+	//void DelayedInit();
+
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
@@ -181,6 +188,7 @@ protected:
 	void OnEndDebugDamageIndicatorTimer();
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
 	void DashTick(float DeltaSeconds);

@@ -22,6 +22,8 @@ struct FLevelData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float OnDeathMultiplicator;
+
+	void Log();
 };
 
 UCLASS()
