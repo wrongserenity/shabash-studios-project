@@ -51,6 +51,8 @@ struct FPlayerAttackStats
 	float AttackAngle;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDeath);
+
 UCLASS(config = Game)
 class AHypercubeCharacter : public ACharacter
 {
@@ -78,6 +80,9 @@ class AHypercubeCharacter : public ACharacter
 
 public:
 	AHypercubeCharacter();
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnPlayerDeath PlayerDeathDelegate;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -108,10 +113,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashCooldownTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Score")
+	float Score;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Score")
+	float BaseScoreForEnemy;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplierEnemyCost;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMulptiplier;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
@@ -193,9 +204,9 @@ public:
 	void UpdateDamageMultiplier();
 
 	UFUNCTION(BlueprintCallable)
-	void AddChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy);
+	void OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
-	void RemoveChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy);
+	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
 };
 

@@ -191,7 +191,7 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 
 void ABase_NPC_SimpleChase::OnNotice()
 {
-	AttackTarget->AddChasingDamageMultiplier(this);
+	AttackTarget->OnEnemyAggro(this);
 }
 
 void ABase_NPC_SimpleChase::Attack()
@@ -248,6 +248,6 @@ void ABase_NPC_SimpleChase::OnEndJump()
 
 void ABase_NPC_SimpleChase::PlayDeath()
 {
-	AttackTarget->RemoveChasingDamageMultiplier(this);
+	AttackTarget->OnEnemyDeath(this);
 	Destroy();
 }

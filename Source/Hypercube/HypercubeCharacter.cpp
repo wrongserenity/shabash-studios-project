@@ -68,10 +68,12 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DashMoveControlTime = 0.1f;
 	DashCooldownTime = 0.5f;
 
+	Score = 0.0f;
+	BaseScoreForEnemy = 10.0f;
+
 	DamageMultiplierEnemyCost = 0.5f;
 	EnemyChasing.Empty();
 	DamageMulptiplier = 1.0f;
-
 
 	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
 
@@ -365,6 +367,7 @@ void AHypercubeCharacter::PlayDeath()
 	MovementPhase = EPlayerMovementPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
+	PlayerDeathDelegate.Broadcast();
 }
 
 void AHypercubeCharacter::UpdateDamageMultiplier()
@@ -372,7 +375,7 @@ void AHypercubeCharacter::UpdateDamageMultiplier()
 	DamageMulptiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
 }
 
-void AHypercubeCharacter::AddChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy)
+void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 {
 	if (!EnemyChasing.Contains(Enemy))
 	{
@@ -381,8 +384,9 @@ void AHypercubeCharacter::AddChasingDamageMultiplier(class ABase_NPC_SimpleChase
 	}
 }
 
-void AHypercubeCharacter::RemoveChasingDamageMultiplier(ABase_NPC_SimpleChase* Enemy)
+void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
+	Score += BaseScoreForEnemy * DamageMulptiplier;
 	if (EnemyChasing.Contains(Enemy))
 	{
 		EnemyChasing.Remove(Enemy);
