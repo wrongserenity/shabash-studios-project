@@ -68,4 +68,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
 
+	UFUNCTION(BlueprintCallable)
+	float GetPlayerHealthValue();
+
 };
