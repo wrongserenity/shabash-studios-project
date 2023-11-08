@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
 #include "Components/SphereComponent.h"
+//#include "Blueprint/AIBlueprintHelperLibrary.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -28,6 +29,8 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	MoveComp->bOrientRotationToMovement = true;
 
 	Health = MaxHealth = 100.0f;
+
+	JumpTime = 2.0f;
 
 	AggroRadius = 400.0f;
 
@@ -219,6 +222,28 @@ void ABase_NPC_SimpleChase::Attack()
 		SetTickState(false);
 		AttackEndDelegate.Broadcast(true);
 	}
+}
+
+void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%f, %f, %f"), Destination.X, Destination.Y, Destination.Z);
+	FVector NowPos = GetActorLocation();
+	FVector LookDestination = Destination - NowPos;
+	LookDestination.Z = 0.0f;
+	SetActorRotation(LookDestination.Rotation().Quaternion());
+	FVector Velocity;
+	Velocity.X = (Destination.X - NowPos.X) / JumpTime;
+	Velocity.Y = (Destination.Y - NowPos.Y) / JumpTime;
+	Velocity.Z = Destination.Z + NowPos.Z - 0.05f * JumpTime * JumpTime * MoveComp->GetGravityZ();
+	LaunchCharacter(Velocity, true, true);
+	UE_LOG(LogTemp, Warning, TEXT("%f"), MoveComp->GetGravityZ());
+	GetWorld()->GetTimerManager().SetTimer(JumpTimerHandle, this, &ABase_NPC_SimpleChase::OnEndJump, JumpTime, false);
+}
+
+void ABase_NPC_SimpleChase::OnEndJump()
+{
+	UE_LOG(LogTemp, Warning, TEXT("EndJump!"));
+	JumpEndDelegate.Broadcast(true);
 }
 
 void ABase_NPC_SimpleChase::PlayDeath()

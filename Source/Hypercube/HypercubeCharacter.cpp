@@ -23,7 +23,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
 
-	GetCapsuleComponent()->InitCapsuleSize(42.0f, 96.0f);
+	Capsule = GetCapsuleComponent();
+	Capsule->InitCapsuleSize(42.0f, 96.0f);
 
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
@@ -76,8 +77,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
-	AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
-	AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
+	AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + Capsule->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
+	AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - Capsule->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
 	AttackCollision->SetGenerateOverlapEvents(false);
 	AttackCollision->SetHiddenInGame(false);
 	AttackCollision->SetVisibility(false);
@@ -231,6 +232,8 @@ void AHypercubeCharacter::Dash()
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	MovementPhase = EPlayerMovementPhase::Dashing;
 	bCanDash = false;
+	
+	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 
 	//TSet<AActor*> collisions;
 	//GetCapsuleComponent()->GetOverlappingActors(collisions);
@@ -252,6 +255,7 @@ void AHypercubeCharacter::StopDashing()
 	MoveComp->SetMovementMode(EMovementMode::MOVE_Walking);
 	MovementPhase = EPlayerMovementPhase::Walking;
 	bDashMovementBlocked = true;
+	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 	//UE_LOG(LogTemp, Warning, TEXT("End of dash"));
 	GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AHypercubeCharacter::OnEndDashCooldown, DashCooldownTime, false);
 }
