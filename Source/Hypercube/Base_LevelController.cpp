@@ -21,8 +21,11 @@ void ABase_LevelController::BeginPlay()
 	if (LoadedData)
 	{
 		LevelData = LoadedData->LevelDataArr;
-		UE_LOG(LogTemp, Warning, TEXT("%d"), LevelData.Num());
-		LevelData.Last().Log();
+		UE_LOG(LogTemp, Warning, TEXT("Total level walkthroughs: %d"), LevelData.Num());
+		if (LevelData.Num())
+		{
+			LevelData.Last().Log();
+		}
 	}
 	else
 	{
@@ -94,5 +97,11 @@ void ABase_LevelController::ClearLevelData()
 
 float ABase_LevelController::GetPlayerHealthValue()
 {
-	return 150.0f - LevelData.Last().Score / 10.0f;
+	if (!LevelData.Num())
+	{
+		return 150.0f;
+	}
+	float NewHealth = 150.0f - LevelData.Last().Score / 10.0f;
+	NewHealth = NewHealth < 40.0f ? 40.0f : NewHealth;
+	return NewHealth;
 }
