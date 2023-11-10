@@ -7,6 +7,8 @@
 #include "Base_RunDataSave.h"
 #include "Base_LevelController.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
+
 UCLASS()
 class HYPERCUBE_API ABase_LevelController : public AActor
 {
@@ -15,6 +17,9 @@ class HYPERCUBE_API ABase_LevelController : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ABase_LevelController();
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnAllEnemiesDead AllEnemiesDeadDelegate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString SaveSlotName;
@@ -29,6 +34,9 @@ public:
 	float AfterPlayerDeathTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AfterAllEnemiesDeadTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName NextLevelName;
 
 protected:
@@ -37,10 +45,10 @@ protected:
 	
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
-	FTimerHandle AfterPlayerDeathTimerHandle;
+	FTimerHandle AfterLevelTimerHandle;
 
 	virtual void BeginPlay() override;
-	virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
+	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 public:	
 
@@ -64,6 +72,18 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void AfterPlayerDeath();
+
+	UFUNCTION(BlueprintCallable)
+	void OnAllEnemiesDead();
+
+	UFUNCTION(BlueprintCallable)
+	void AfterAllEnemiesDead();
+
+	UFUNCTION(BlueprintCallable)
+	void SaveLevelData();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadNewLevel();
 
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
