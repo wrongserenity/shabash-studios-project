@@ -81,7 +81,7 @@ class AHypercubeCharacter : public ACharacter
 public:
 	AHypercubeCharacter();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class ABase_LevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)

@@ -7,12 +7,12 @@ ABase_LevelController::ABase_LevelController()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	AfterPlayerDeathTime = 5.0f;
+	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
 	NextLevelName = TEXT("ThirdPersonExampleMap");
 
 	SaveSlotName = "RunDataSaveSlot";
-	CurLevelData = { 0.0f, 0, 1.0f, 1.0f };
+	CurLevelData = { false, 0.0f, 0, 1.0f, 1.0f };
 }
 
 void ABase_LevelController::BeginPlay()
@@ -34,19 +34,6 @@ void ABase_LevelController::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ABase_LevelController::EndPlay(EEndPlayReason::Type EndPlayReason)
-{
-	CurLevelData.Score = Player->Score;
-	CurLevelData.OnDeathMultiplicator = Player->DamageMulptiplier;
-	LevelData.Add(CurLevelData);
-	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
-	if (SaveGameInstance)
-	{
-		SaveGameInstance->LevelDataArr = LevelData;
-		UGameplayStatics::SaveGameToSlot(SaveGameInstance, SaveSlotName, 0);
-	}
-}
-
 void ABase_LevelController::AddEnemiesKilled()
 {
 	++CurLevelData.EnemiesKilled;
@@ -63,6 +50,10 @@ void ABase_LevelController::RemoveEnemy(class ABase_NPC_SimpleChase* Enemy)
 	{
 		Enemies.Remove(Enemy);
 		AddEnemiesKilled();
+	}
+	if (!Enemies.Num())
+	{
+		OnAllEnemiesDead();
 	}
 }
 
@@ -82,11 +73,44 @@ void ABase_LevelController::SetPlayerCharacter(class AHypercubeCharacter* Player
 
 void ABase_LevelController::OnPlayerDeath()
 {
-	GetWorld()->GetTimerManager().SetTimer(AfterPlayerDeathTimerHandle, this, &ABase_LevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
+	CurLevelData.PlayerWon = false;
+	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
 }
 
 void ABase_LevelController::AfterPlayerDeath()
 {
+	LoadNewLevel();
+}
+
+void ABase_LevelController::OnAllEnemiesDead()
+{
+	CurLevelData.PlayerWon = true;
+	AllEnemiesDeadDelegate.Broadcast();
+	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterAllEnemiesDead, AfterAllEnemiesDeadTime, false);
+}
+
+void ABase_LevelController::AfterAllEnemiesDead()
+{
+	LoadNewLevel();
+}
+
+void ABase_LevelController::SaveLevelData()
+{
+	CurLevelData.Score = Player->Score;
+	CurLevelData.OnDeathMultiplicator = Player->DamageMulptiplier;
+	UpdateMaxMultiplicator(Player->DamageMulptiplier);
+	LevelData.Add(CurLevelData);
+	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
+	if (SaveGameInstance)
+	{
+		SaveGameInstance->LevelDataArr = LevelData;
+		UGameplayStatics::SaveGameToSlot(SaveGameInstance, SaveSlotName, 0);
+	}
+}
+
+void ABase_LevelController::LoadNewLevel()
+{
+	SaveLevelData();
 	UGameplayStatics::OpenLevel(GetWorld(), NextLevelName);
 }
 
