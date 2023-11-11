@@ -99,6 +99,8 @@ public:
 
 protected:
 
+	class ABase_LevelController* LevelController;
+
 	uint8 TickSemaphore;
 
 	FTimerHandle AttackTimerHandle;

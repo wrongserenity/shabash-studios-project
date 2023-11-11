@@ -10,7 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
 #include "Components/SphereComponent.h"
-//#include "Blueprint/AIBlueprintHelperLibrary.h"
+#include "Base_LevelController.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -32,7 +32,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 
 	JumpTime = 2.0f;
 
-	AggroRadius = 400.0f;
+	AggroRadius = 800.0f;
 
 	NoticeCollision = CreateAbstractDefaultSubobject<USphereComponent>(TEXT("Notice Collision"));
 	NoticeCollision->AttachTo(RootComponent);
@@ -85,6 +85,18 @@ void ABase_NPC_SimpleChase::DelayedInit()
 	NoticeCollision->SetGenerateOverlapEvents(true);
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
+
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+	if (FoundActors.Num())
+	{
+		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+		LevelController->AddEnemy(this);
+	}
+	else
+	{
+		LevelController = nullptr;
+	}
 }
 
 void ABase_NPC_SimpleChase::SetTickState(bool Activate)
@@ -191,7 +203,7 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 
 void ABase_NPC_SimpleChase::OnNotice()
 {
-	AttackTarget->AddChasingDamageMultiplier(this);
+	AttackTarget->OnEnemyAggro(this);
 }
 
 void ABase_NPC_SimpleChase::Attack()
@@ -234,7 +246,7 @@ void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
 	FVector Velocity;
 	Velocity.X = (Destination.X - NowPos.X) / JumpTime;
 	Velocity.Y = (Destination.Y - NowPos.Y) / JumpTime;
-	Velocity.Z = Destination.Z + NowPos.Z - 0.05f * JumpTime * JumpTime * MoveComp->GetGravityZ();
+	Velocity.Z = Destination.Z - NowPos.Z - 0.25f * JumpTime * JumpTime * MoveComp->GetGravityZ();
 	LaunchCharacter(Velocity, true, true);
 	UE_LOG(LogTemp, Warning, TEXT("%f"), MoveComp->GetGravityZ());
 	GetWorld()->GetTimerManager().SetTimer(JumpTimerHandle, this, &ABase_NPC_SimpleChase::OnEndJump, JumpTime, false);
@@ -248,6 +260,6 @@ void ABase_NPC_SimpleChase::OnEndJump()
 
 void ABase_NPC_SimpleChase::PlayDeath()
 {
-	AttackTarget->RemoveChasingDamageMultiplier(this);
+	AttackTarget->OnEnemyDeath(this);
 	Destroy();
 }
