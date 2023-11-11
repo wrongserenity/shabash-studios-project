@@ -246,7 +246,7 @@ void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
 	FVector Velocity;
 	Velocity.X = (Destination.X - NowPos.X) / JumpTime;
 	Velocity.Y = (Destination.Y - NowPos.Y) / JumpTime;
-	Velocity.Z = Destination.Z + NowPos.Z - 0.05f * JumpTime * JumpTime * MoveComp->GetGravityZ();
+	Velocity.Z = Destination.Z - NowPos.Z - 0.25f * JumpTime * JumpTime * MoveComp->GetGravityZ();
 	LaunchCharacter(Velocity, true, true);
 	UE_LOG(LogTemp, Warning, TEXT("%f"), MoveComp->GetGravityZ());
 	GetWorld()->GetTimerManager().SetTimer(JumpTimerHandle, this, &ABase_NPC_SimpleChase::OnEndJump, JumpTime, false);
