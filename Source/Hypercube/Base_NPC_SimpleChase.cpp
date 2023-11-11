@@ -32,7 +32,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 
 	JumpTime = 2.0f;
 
-	AggroRadius = 400.0f;
+	AggroRadius = 800.0f;
 
 	NoticeCollision = CreateAbstractDefaultSubobject<USphereComponent>(TEXT("Notice Collision"));
 	NoticeCollision->AttachTo(RootComponent);

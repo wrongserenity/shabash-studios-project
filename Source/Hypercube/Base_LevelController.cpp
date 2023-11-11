@@ -9,7 +9,7 @@ ABase_LevelController::ABase_LevelController()
 
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
-	NextLevelName = TEXT("ThirdPersonExampleMap");
+	NextLevelName = TEXT("level1");
 
 	SaveSlotName = "RunDataSaveSlot";
 	CurLevelData = { false, 0.0f, 0, 1.0f, 1.0f };
@@ -125,7 +125,7 @@ float ABase_LevelController::GetPlayerHealthValue()
 	{
 		return 150.0f;
 	}
-	float NewHealth = 150.0f - LevelData.Last().Score / 10.0f;
+	float NewHealth = 150.0f - LevelData.Last().Score / 16.0f;
 	NewHealth = NewHealth < 40.0f ? 40.0f : NewHealth;
 	return NewHealth;
 }
