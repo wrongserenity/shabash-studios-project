@@ -52,6 +52,7 @@ struct FPlayerAttackStats
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDeath);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPause, bool, bIsPaused);
 
 UCLASS(config = Game)
 class AHypercubeCharacter : public ACharacter
@@ -78,6 +79,9 @@ class AHypercubeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* Debug_DamageIndicator;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class APlayerController* PlayerController;
+
 public:
 	AHypercubeCharacter();
 
@@ -86,6 +90,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnPlayerDeath PlayerDeathDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnPause PauseDelegate;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -133,6 +140,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pause")
+	bool bIsGamePaused;
 
 protected:
 
@@ -216,5 +226,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void Pause();
+
+	UFUNCTION(BlueprintCallable)
+	FString GetScoreboard(int Num) const;
 };
 
