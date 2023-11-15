@@ -51,6 +51,8 @@ struct FPlayerAttackStats
 	float AttackAngle;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDeath);
+
 UCLASS(config = Game)
 class AHypercubeCharacter : public ACharacter
 {
@@ -65,6 +67,9 @@ class AHypercubeCharacter : public ACharacter
 	class UCameraComponent* FollowCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UCapsuleComponent* Capsule;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* AttackCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -75,6 +80,12 @@ class AHypercubeCharacter : public ACharacter
 
 public:
 	AHypercubeCharacter();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class ABase_LevelController* LevelController;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnPlayerDeath PlayerDeathDelegate;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -105,10 +116,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashCooldownTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Score")
+	float Score;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Score")
+	float BaseScoreForEnemy;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplierEnemyCost;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMulptiplier;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
@@ -147,6 +164,10 @@ protected:
 
 protected:
 
+	//FTimerHandle DelayedInitTimerHandle;
+	//float DelayedInitTime;
+	//void DelayedInit();
+
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
@@ -167,6 +188,7 @@ protected:
 	void OnEndDebugDamageIndicatorTimer();
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
 	void DashTick(float DeltaSeconds);
@@ -190,9 +212,9 @@ public:
 	void UpdateDamageMultiplier();
 
 	UFUNCTION(BlueprintCallable)
-	void AddChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy);
+	void OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
-	void RemoveChasingDamageMultiplier(class ABase_NPC_SimpleChase* Enemy);
+	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
 };
 

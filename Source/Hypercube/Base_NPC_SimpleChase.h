@@ -44,6 +44,7 @@ enum class EAttackPhase : uint8
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJumpEnd, bool, success);
 
 UCLASS()
 class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
@@ -75,11 +76,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnJumpEnd JumpEndDelegate;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float Health;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float MaxHealth;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Jump")
+	float JumpTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroRadius;
@@ -91,6 +98,8 @@ public:
 	float Debug_DamageIndicatorTime;
 
 protected:
+
+	class ABase_LevelController* LevelController;
 
 	uint8 TickSemaphore;
 
@@ -116,6 +125,9 @@ protected:
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
 
+	FTimerHandle JumpTimerHandle;
+	void OnEndJump();
+
 public:	
 
 	UFUNCTION(BlueprintCallable)
@@ -132,6 +144,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void Attack();
+
+	UFUNCTION(BlueprintCallable)
+	void JumpTo(FVector Destination);
 
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
