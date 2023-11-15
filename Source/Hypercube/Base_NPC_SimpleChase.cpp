@@ -86,17 +86,17 @@ void ABase_NPC_SimpleChase::DelayedInit()
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
 
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
-	if (FoundActors.Num())
-	{
-		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
-		LevelController->AddEnemy(this);
-	}
-	else
-	{
-		LevelController = nullptr;
-	}
+	//TArray<AActor*> FoundActors;
+	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+	//if (FoundActors.Num())
+	//{
+	//	LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+	//	LevelController->AddEnemy(this);
+	//}
+	//else
+	//{
+	//	LevelController = nullptr;
+	//}
 }
 
 void ABase_NPC_SimpleChase::SetTickState(bool Activate)

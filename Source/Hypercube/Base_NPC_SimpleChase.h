@@ -73,6 +73,9 @@ public:
 
 	ABase_NPC_SimpleChase();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = LevelController)
+	class ABase_LevelController* LevelController;
+
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;
 
@@ -98,8 +101,6 @@ public:
 	float Debug_DamageIndicatorTime;
 
 protected:
-
-	class ABase_LevelController* LevelController;
 
 	uint8 TickSemaphore;
 

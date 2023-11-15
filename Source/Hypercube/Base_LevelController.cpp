@@ -2,6 +2,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
 #include "Base_NPC_SimpleChase.h"
+#include "Base_EnemySpawnPoint.h"
 
 ABase_LevelController::ABase_LevelController()
 {
@@ -12,10 +13,19 @@ ABase_LevelController::ABase_LevelController()
 	NextLevelName = TEXT("level1");
 
 	SaveSlotName = "RunDataSaveSlot";
-	CurLevelData = { false, 0.0f, 0, 1.0f, 1.0f };
+	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f };
+
+	EnemiesKilled = 0;
 }
 
 void ABase_LevelController::BeginPlay()
+{
+	LoadLevelData();
+	SpawnEnemies();
+	Super::BeginPlay();
+}
+
+void ABase_LevelController::LoadLevelData()
 {
 	UBase_RunDataSave* LoadedData = Cast<UBase_RunDataSave>(UGameplayStatics::LoadGameFromSlot(SaveSlotName, 0));
 	if (LoadedData)
@@ -31,12 +41,42 @@ void ABase_LevelController::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No data to load"));
 	}
-	Super::BeginPlay();
+}
+
+void ABase_LevelController::SpawnEnemies()
+{
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_EnemySpawnPoint::StaticClass(), SpawnPoints);
+	for (int i = 0; i < SpawnPoints.Num(); ++i)
+	{
+		SpawnPoints.Swap(i, FMath::RandRange(i, SpawnPoints.Num() - 1));
+	}
+	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * GetEnemyPercentage());
+	BeginEnemyCount = BeginEnemyCount > SpawnPoints.Num() ? SpawnPoints.Num() : BeginEnemyCount;
+	CurLevelData.TotalEnemies = BeginEnemyCount;
+	UE_LOG(LogTemp, Warning, TEXT("Enemies spawned: %d"), BeginEnemyCount);
+	for (int i = 0; i < BeginEnemyCount; ++i)
+	{
+		ABase_EnemySpawnPoint* SpawnPoint = Cast<ABase_EnemySpawnPoint>(SpawnPoints[i]);
+		if (SpawnPoint)
+		{
+			SpawnEnemy(SpawnPoint);
+		}
+	}
+}
+
+void ABase_LevelController::SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint)
+{
+	ABase_NPC_SimpleChase* Enemy = SpawnPoint->SpawnEnemy();
+	if (Enemy)
+	{
+		Enemy->LevelController = this;
+		Enemies.Add(Enemy);
+	}
 }
 
 void ABase_LevelController::AddEnemiesKilled()
 {
-	++CurLevelData.EnemiesKilled;
+	++EnemiesKilled;
 }
 
 void ABase_LevelController::AddEnemy(class ABase_NPC_SimpleChase* Enemy)
@@ -97,6 +137,7 @@ void ABase_LevelController::AfterAllEnemiesDead()
 void ABase_LevelController::SaveLevelData()
 {
 	CurLevelData.Score = Player->Score;
+	CurLevelData.EnemiesPercentageKilled = float(EnemiesKilled) / float(BeginEnemyCount);
 	CurLevelData.OnDeathMultiplicator = Player->DamageMulptiplier;
 	UpdateMaxMultiplicator(Player->DamageMulptiplier);
 	LevelData.Add(CurLevelData);
@@ -128,4 +169,18 @@ float ABase_LevelController::GetPlayerHealthValue()
 	float NewHealth = 150.0f - LevelData.Last().Score / 16.0f;
 	NewHealth = NewHealth < 40.0f ? 40.0f : NewHealth;
 	return NewHealth;
+}
+
+float ABase_LevelController::GetEnemyPercentage()
+{
+	if (!LevelData.Num())
+	{
+		return 0.8f;
+	}
+	float LastPercentage = LevelData.Last().EnemiesPercentageKilled;
+	if (LastPercentage < 0.33f)
+	{
+		return 0.33f;
+	}
+	return LastPercentage;
 }

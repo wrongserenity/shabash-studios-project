@@ -18,7 +18,10 @@ struct FLevelData
 	float Score;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int EnemiesKilled;
+	float EnemiesPercentageKilled;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int TotalEnemies;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxMultiplicator;

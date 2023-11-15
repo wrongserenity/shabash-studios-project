@@ -43,6 +43,10 @@ protected:
 
 	class AHypercubeCharacter* Player;
 	
+	TArray<class AActor*> SpawnPoints;
+
+	int BeginEnemyCount;
+	int EnemiesKilled;
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
@@ -51,6 +55,15 @@ protected:
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 public:	
+
+	UFUNCTION(BlueprintCallable)
+	void LoadLevelData();
+
+	UFUNCTION(BlueprintCallable)
+	void SpawnEnemies();
+
+	UFUNCTION(BlueprintCallable)
+	void SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint);
 
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter);
@@ -90,5 +103,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetPlayerHealthValue();
+
+	UFUNCTION(BlueprintCallable)
+	float GetEnemyPercentage();
 
 };
