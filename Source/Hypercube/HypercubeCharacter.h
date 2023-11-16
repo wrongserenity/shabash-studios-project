@@ -132,8 +132,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplierEnemyCost;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
+	float DamageMultiplierStaysTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
+	float DamageMultiplierDecreaseSpeed;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Attack | Damage Multiplying")
-	float DamageMulptiplier;
+	float DamageMultiplier;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Attack | Damage Multiplying")
+	float TargetDamageMultiplier;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FPlayerAttackStats SimpleAttack;
@@ -163,6 +172,9 @@ protected:
 
 	bool bIsInvincible;
 	FTimerHandle InvincTimerHandle;
+
+	bool bDamageMultiplierStays;
+	FTimerHandle DamageMultiplierStaysTimerHandle;
 
 	FTimerHandle AttackTimerHandle;
 
@@ -220,6 +232,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateDamageMultiplier();
+
+	UFUNCTION(BlueprintCallable)
+	void OnEndDamageMultiplierStays();
 
 	UFUNCTION(BlueprintCallable)
 	void OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy);

@@ -76,7 +76,10 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	DamageMultiplierEnemyCost = 0.5f;
 	EnemyChasing.Empty();
-	DamageMulptiplier = 1.0f;
+	DamageMultiplier = TargetDamageMultiplier = 1.0f;
+	DamageMultiplierStaysTime = 5.0f;
+	DamageMultiplierDecreaseSpeed = 1.0f;
+	bDamageMultiplierStays = false;
 
 	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
 
@@ -177,6 +180,15 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 	{
 		AttackTick();
 	}
+	if (!bDamageMultiplierStays && DamageMultiplier > TargetDamageMultiplier)
+	{
+		DamageMultiplier -= DamageMultiplierDecreaseSpeed * DeltaSeconds;
+		if (DamageMultiplier < TargetDamageMultiplier)
+		{
+			DamageMultiplier = TargetDamageMultiplier;
+			bDamageMultiplierStays = true;
+		}
+	}
 	Super::Tick(DeltaSeconds);
 }
 
@@ -204,7 +216,7 @@ void AHypercubeCharacter::AttackTick()
 		if (tmp && !AttackEnemiesCollided.Contains(tmp))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
-			tmp->TakeDamage(SimpleAttack.Damage * DamageMulptiplier);
+			tmp->TakeDamage(SimpleAttack.Damage * DamageMultiplier);
 			AttackEnemiesCollided.Add(tmp);
 		}
 	}
@@ -412,7 +424,28 @@ void AHypercubeCharacter::PlayDeath()
 
 void AHypercubeCharacter::UpdateDamageMultiplier()
 {
-	DamageMulptiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+	TargetDamageMultiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+	if (TargetDamageMultiplier >= DamageMultiplier)
+	{
+		if (GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle))
+		{
+			GetWorld()->GetTimerManager().ClearTimer(DamageMultiplierStaysTimerHandle);
+		}
+		DamageMultiplier = TargetDamageMultiplier;
+	}
+	else
+	{
+		if (!GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle))
+		{
+			GetWorld()->GetTimerManager().SetTimer(DamageMultiplierStaysTimerHandle, this, &AHypercubeCharacter::OnEndDamageMultiplierStays, DamageMultiplierStaysTime, false);
+			bDamageMultiplierStays = true;
+		}
+	}
+}
+
+void AHypercubeCharacter::OnEndDamageMultiplierStays()
+{
+	bDamageMultiplierStays = false;
 }
 
 void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
@@ -426,11 +459,11 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 
 void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
-	Score += BaseScoreForEnemy * DamageMulptiplier;
+	Score += BaseScoreForEnemy * DamageMultiplier;
 	if (LevelController)
 	{
 		LevelController->RemoveEnemy(Enemy);
-		LevelController->UpdateMaxMultiplicator(DamageMulptiplier);
+		LevelController->UpdateMaxMultiplicator(DamageMultiplier);
 	}
 	if (EnemyChasing.Contains(Enemy))
 	{
