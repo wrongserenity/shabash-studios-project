@@ -15,6 +15,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Base_LevelController.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -105,6 +106,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Debug_DamageIndicatorTime = 3.0f;
 
 	//DelayedInitTime = 0.2f;
+
+	bIsGamePaused = false;
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -120,6 +123,7 @@ void AHypercubeCharacter::BeginPlay()
 	{
 		LevelController = nullptr;
 	}
+	PlayerController = GetWorld()->GetFirstPlayerController();
 	Super::BeginPlay();
 	//GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &AHypercubeCharacter::DelayedInit, DelayedInitTime, false);
 }
@@ -150,6 +154,8 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AHypercubeCharacter::Dash);
 
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AHypercubeCharacter::ReceiveAttackInput);
+
+	PlayerInputComponent->BindAction("Pause", IE_Pressed, this, &AHypercubeCharacter::Pause).bExecuteWhenPaused = true;
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AHypercubeCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AHypercubeCharacter::MoveRight);
@@ -431,4 +437,42 @@ void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 		EnemyChasing.Remove(Enemy);
 		UpdateDamageMultiplier();
 	}
+}
+
+void AHypercubeCharacter::Pause()
+{
+	bIsGamePaused = !bIsGamePaused;
+	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
+	PlayerController->bShowMouseCursor = bIsGamePaused;
+	PlayerController->bEnableClickEvents = bIsGamePaused;
+	PlayerController->bEnableMouseOverEvents = bIsGamePaused;
+	if (bIsGamePaused)
+	{
+		PlayerController->SetInputMode(FInputModeGameAndUI());
+	}
+	else
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly());
+	}
+	PauseDelegate.Broadcast(bIsGamePaused);
+}
+
+FString AHypercubeCharacter::GetScoreboard(int Num) const
+{
+	TArray<float> Scores;
+	for (int i = 0; i < LevelController->LevelData.Num(); ++i)
+	{
+		Scores.Add(LevelController->LevelData[i].Score);
+	}
+	Scores.Sort();
+	FString Result = "Scoreboard:\n\n";
+	Num = Num > Scores.Num() ? Scores.Num() : Num;
+	for (int i = 0; i < Num; ++i)
+	{
+		Result.AppendInt(i + 1);
+		Result += FString(". ");
+		Result.AppendInt(FMath::RoundToInt(Scores[Scores.Num() - 1 - i]));
+		Result.AppendChar('\n');
+	}
+	return Result;
 }
