@@ -45,7 +45,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	AttackCollision->AttachTo(RootComponent);
 	AttackCollision->SetRelativeLocation(FVector((Capsule->GetScaledCapsuleRadius() + SimpleAttack.AttackLength) / 2.0f, 0.0f, 20.0f));
 	AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackLength - Capsule->GetScaledCapsuleRadius(), SimpleAttack.AttackWidth, 32.0f));
-	AttackCollision->SetGenerateOverlapEvents(false);
+	AttackCollision->SetGenerateOverlapEvents(true);
 	AttackCollision->SetHiddenInGame(false);
 	AttackCollision->SetVisibility(false);
 	AttackCollision->SetActive(false);
@@ -54,7 +54,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Debug_AttackCollision->AttachTo(RootComponent);
 	Debug_AttackCollision->SetRelativeLocation(FVector((Capsule->GetScaledCapsuleRadius() + SimpleAttack.AttackLength) / 2.0f, 0.0f, 20.0f));
 	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackLength - Capsule->GetScaledCapsuleRadius(), SimpleAttack.AttackWidth, 32.0f));
-	Debug_AttackCollision->SetGenerateOverlapEvents(true);
+	Debug_AttackCollision->SetGenerateOverlapEvents(false);
 	Debug_AttackCollision->SetHiddenInGame(false);
 	Debug_AttackCollision->SetVisibility(false);
 	Debug_AttackCollision->SetActive(false);

@@ -462,7 +462,14 @@ FString AHypercubeCharacter::GetScoreboard(int Num) const
 	TArray<float> Scores;
 	for (int i = 0; i < LevelController->LevelData.Num(); ++i)
 	{
-		Scores.Add(LevelController->LevelData[i].Score);
+		if (LevelController->LevelData[i].Score > 0.0f)
+		{
+			Scores.Add(LevelController->LevelData[i].Score);
+		}
+	}
+	if (!Scores.Num())
+	{
+		return FString("");
 	}
 	Scores.Sort();
 	FString Result = "Scoreboard:\n\n";
