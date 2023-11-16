@@ -80,6 +80,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DamageMultiplierStaysTime = 5.0f;
 	DamageMultiplierDecreaseSpeed = 1.0f;
 	bDamageMultiplierStays = false;
+	bDamageMultiplierFalling = false;
 
 	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
 
@@ -180,13 +181,13 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 	{
 		AttackTick();
 	}
-	if (!bDamageMultiplierStays && DamageMultiplier > TargetDamageMultiplier)
+	if (bDamageMultiplierFalling && DamageMultiplier > TargetDamageMultiplier)
 	{
 		DamageMultiplier -= DamageMultiplierDecreaseSpeed * DeltaSeconds;
 		if (DamageMultiplier < TargetDamageMultiplier)
 		{
 			DamageMultiplier = TargetDamageMultiplier;
-			bDamageMultiplierStays = true;
+			bDamageMultiplierFalling = false;
 		}
 	}
 	Super::Tick(DeltaSeconds);
@@ -435,7 +436,7 @@ void AHypercubeCharacter::UpdateDamageMultiplier()
 	}
 	else
 	{
-		if (!GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle))
+		if (!GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle) && !bDamageMultiplierFalling)
 		{
 			GetWorld()->GetTimerManager().SetTimer(DamageMultiplierStaysTimerHandle, this, &AHypercubeCharacter::OnEndDamageMultiplierStays, DamageMultiplierStaysTime, false);
 			bDamageMultiplierStays = true;
@@ -446,6 +447,7 @@ void AHypercubeCharacter::UpdateDamageMultiplier()
 void AHypercubeCharacter::OnEndDamageMultiplierStays()
 {
 	bDamageMultiplierStays = false;
+	bDamageMultiplierFalling = true;
 }
 
 void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)

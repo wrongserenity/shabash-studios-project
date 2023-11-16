@@ -174,6 +174,7 @@ protected:
 	FTimerHandle InvincTimerHandle;
 
 	bool bDamageMultiplierStays;
+	bool bDamageMultiplierFalling;
 	FTimerHandle DamageMultiplierStaysTimerHandle;
 
 	FTimerHandle AttackTimerHandle;
