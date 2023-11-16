@@ -483,3 +483,8 @@ FString AHypercubeCharacter::GetScoreboard(int Num) const
 	}
 	return Result;
 }
+
+ABase_LevelController* AHypercubeCharacter::GetLevelController() const
+{
+	return LevelController;
+}

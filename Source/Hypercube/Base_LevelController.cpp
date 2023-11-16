@@ -160,7 +160,7 @@ void ABase_LevelController::ClearLevelData()
 	LevelData.Empty();
 }
 
-float ABase_LevelController::GetPlayerHealthValue()
+float ABase_LevelController::GetPlayerHealthValue() const
 {
 	if (!LevelData.Num())
 	{
@@ -171,7 +171,7 @@ float ABase_LevelController::GetPlayerHealthValue()
 	return NewHealth;
 }
 
-float ABase_LevelController::GetEnemyPercentage()
+float ABase_LevelController::GetEnemyPercentage() const
 {
 	if (!LevelData.Num())
 	{
