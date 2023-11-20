@@ -138,8 +138,8 @@ void ABase_LevelController::SaveLevelData()
 {
 	CurLevelData.Score = Player->Score;
 	CurLevelData.EnemiesPercentageKilled = float(EnemiesKilled) / float(BeginEnemyCount);
-	CurLevelData.OnDeathMultiplicator = Player->DamageMulptiplier;
-	UpdateMaxMultiplicator(Player->DamageMulptiplier);
+	CurLevelData.OnDeathMultiplicator = Player->DamageMultiplier;
+	UpdateMaxMultiplicator(Player->DamageMultiplier);
 	LevelData.Add(CurLevelData);
 	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
 	if (SaveGameInstance)
@@ -160,7 +160,7 @@ void ABase_LevelController::ClearLevelData()
 	LevelData.Empty();
 }
 
-float ABase_LevelController::GetPlayerHealthValue()
+float ABase_LevelController::GetPlayerHealthValue() const
 {
 	if (!LevelData.Num())
 	{
@@ -171,7 +171,7 @@ float ABase_LevelController::GetPlayerHealthValue()
 	return NewHealth;
 }
 
-float ABase_LevelController::GetEnemyPercentage()
+float ABase_LevelController::GetEnemyPercentage() const
 {
 	if (!LevelData.Num())
 	{

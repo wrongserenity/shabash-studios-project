@@ -101,10 +101,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
 
-	UFUNCTION(BlueprintCallable)
-	float GetPlayerHealthValue();
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetPlayerHealthValue() const;
 
 	UFUNCTION(BlueprintCallable)
-	float GetEnemyPercentage();
+	float GetEnemyPercentage() const;
 
 };
