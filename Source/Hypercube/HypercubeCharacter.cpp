@@ -58,7 +58,9 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	MovementPhase = EPlayerMovementPhase::Walking;
 	AttackPhase = EPlayerAttackPhase::None;
-
+	
+	
+	bCanAttack = true;
 	bCanDash = true;
 	bDashMovementBlocked = true;
 
@@ -339,6 +341,7 @@ void AHypercubeCharacter::ReceiveAttackInput()
 		return;
 	}
 	MovementPhase = EPlayerMovementPhase::Attacking;
+	bCanAttack = false;
 	Attack();
 }
 
@@ -374,6 +377,7 @@ void AHypercubeCharacter::Attack()
 void AHypercubeCharacter::OnEndAttack()
 {
 	MovementPhase = EPlayerMovementPhase::Walking;
+	bCanAttack = true;
 }
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
@@ -419,6 +423,7 @@ void AHypercubeCharacter::PlayDeath()
 	MovementPhase = EPlayerMovementPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
+	bCanAttack = false;
 	LevelController->OnPlayerDeath();
 	PlayerDeathDelegate.Broadcast();
 }

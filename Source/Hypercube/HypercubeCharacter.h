@@ -150,8 +150,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pause")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsGamePaused;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	bool bCanAttack;
 
 protected:
 
@@ -203,7 +206,6 @@ protected:
 
 	void SetAttackCollision(bool Activate);
 	void SetDebugAttackCollision(bool Activate);
-	void ReceiveAttackInput();
 	void Attack();
 	void OnEndAttack();
 
@@ -251,5 +253,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	class ABase_LevelController* GetLevelController() const;
+
+	UFUNCTION(BlueprintCallable)
+	void ReceiveAttackInput();
 };
 
