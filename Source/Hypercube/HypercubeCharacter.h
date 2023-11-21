@@ -24,6 +24,14 @@ enum class EPlayerAttackPhase : uint8
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
 
+UENUM(BlueprintType)
+enum class EPlayerAction : uint8
+{
+	Attack UMETA(DisplayName = "Attack"),
+	Dash UMETA(DisplayName = "Dash"),
+	Damaged UMETA(DisplayName = "Damaged")
+};
+
 USTRUCT(BlueprintType)
 struct FPlayerAttackStats
 {
@@ -51,6 +59,7 @@ struct FPlayerAttackStats
 	float AttackAngle;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerAction, EPlayerAction, Action);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPause, bool, bIsPaused);
 
@@ -87,6 +96,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class ABase_LevelController* LevelController;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnPlayerAction PlayerActionDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnPlayerDeath PlayerDeathDelegate;
@@ -152,9 +164,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsGamePaused;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	bool bCanAttack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	float DamageFXTime;

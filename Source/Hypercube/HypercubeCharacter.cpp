@@ -59,8 +59,6 @@ AHypercubeCharacter::AHypercubeCharacter()
 	MovementPhase = EPlayerMovementPhase::Walking;
 	AttackPhase = EPlayerAttackPhase::None;
 	
-	
-	bCanAttack = true;
 	bCanDash = true;
 	bDashMovementBlocked = true;
 
@@ -298,6 +296,7 @@ void AHypercubeCharacter::Dash()
 		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
 	}
+	PlayerActionDelegate.Broadcast(EPlayerAction::Dash);
 	FVector Forward = FollowCamera->GetForwardVector();
 	Forward.Z = 0.0f;
 	Forward.Normalize();
@@ -371,7 +370,7 @@ void AHypercubeCharacter::ReceiveAttackInput()
 		return;
 	}
 	MovementPhase = EPlayerMovementPhase::Attacking;
-	bCanAttack = false;
+	PlayerActionDelegate.Broadcast(EPlayerAction::Attack);
 	Attack();
 }
 
@@ -407,7 +406,6 @@ void AHypercubeCharacter::Attack()
 void AHypercubeCharacter::OnEndAttack()
 {
 	MovementPhase = EPlayerMovementPhase::Walking;
-	bCanAttack = true;
 }
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
@@ -436,6 +434,7 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 	bIsInvincible = true;
 	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
 	DamageFXTimer = DamageFXTime;
+	PlayerActionDelegate.Broadcast(EPlayerAction::Damaged);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -454,7 +453,6 @@ void AHypercubeCharacter::PlayDeath()
 	MovementPhase = EPlayerMovementPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
-	bCanAttack = false;
 	LevelController->OnPlayerDeath();
 	PlayerDeathDelegate.Broadcast();
 }

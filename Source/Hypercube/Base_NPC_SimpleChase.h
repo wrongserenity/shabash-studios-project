@@ -51,6 +51,8 @@ enum class EEnemyPhase : uint8
 	Chasing UMETA(DisplayName = "Chasing")
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDamaged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJumpEnd, bool, success);
 
@@ -83,6 +85,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = LevelController)
 	class ABase_LevelController* LevelController;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyDamaged EnemyDamagedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyDeath EnemyDeathDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;

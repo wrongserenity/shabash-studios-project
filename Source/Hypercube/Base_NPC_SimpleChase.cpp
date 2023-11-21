@@ -201,6 +201,7 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 {
 	Health -= Damage;
 	ActivateDebugDamageIndicator();
+	EnemyDamagedDelegate.Broadcast();
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -276,5 +277,5 @@ void ABase_NPC_SimpleChase::OnEndJump()
 void ABase_NPC_SimpleChase::PlayDeath()
 {
 	AttackTarget->OnEnemyDeath(this);
-	Destroy();
+	EnemyDeathDelegate.Broadcast();
 }
