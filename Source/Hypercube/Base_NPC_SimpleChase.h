@@ -176,4 +176,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	inline class ABase_LevelController* GetLevelController() const;
 };

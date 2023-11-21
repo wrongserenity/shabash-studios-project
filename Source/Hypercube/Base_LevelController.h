@@ -21,22 +21,28 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAllEnemiesDead AllEnemiesDeadDelegate;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FString SaveSlotName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	TArray<FLevelData> LevelData;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FLevelData CurLevelData;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float AfterPlayerDeathTime;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float AfterAllEnemiesDeadTime;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	float NoticeSoundTurnOffTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
+	bool bEnemyCanNoticeSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	FName NextLevelName;
 
 protected:
@@ -50,6 +56,7 @@ protected:
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
+	FTimerHandle NoticeSoundTurnOffTimerHandle;
 
 	virtual void BeginPlay() override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
@@ -106,5 +113,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetEnemyPercentage() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetNoticeSoundTurnOff();
+
+	UFUNCTION(BlueprintCallable)
+	void OnEndNoticeSoundTurnedOff();
 
 };

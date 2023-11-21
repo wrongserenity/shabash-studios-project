@@ -279,3 +279,8 @@ void ABase_NPC_SimpleChase::PlayDeath()
 	AttackTarget->OnEnemyDeath(this);
 	EnemyDeathDelegate.Broadcast();
 }
+
+class ABase_LevelController* ABase_NPC_SimpleChase::GetLevelController() const
+{
+	return LevelController;
+}

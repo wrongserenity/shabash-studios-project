@@ -10,6 +10,10 @@ ABase_LevelController::ABase_LevelController()
 
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
+	NoticeSoundTurnOffTime = 1.0f;
+
+	bEnemyCanNoticeSound = true;
+
 	NextLevelName = TEXT("level1");
 
 	SaveSlotName = "RunDataSaveSlot";
@@ -183,4 +187,15 @@ float ABase_LevelController::GetEnemyPercentage() const
 		return 0.33f;
 	}
 	return LastPercentage;
+}
+
+void ABase_LevelController::SetNoticeSoundTurnOff()
+{
+	bEnemyCanNoticeSound = false;
+	GetWorld()->GetTimerManager().SetTimer(NoticeSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndNoticeSoundTurnedOff, NoticeSoundTurnOffTime, false);
+}
+
+void ABase_LevelController::OnEndNoticeSoundTurnedOff()
+{
+	bEnemyCanNoticeSound = true;
 }
