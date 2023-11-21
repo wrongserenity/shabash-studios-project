@@ -114,6 +114,10 @@ AHypercubeCharacter::AHypercubeCharacter()
 	//DelayedInitTime = 0.2f;
 
 	bIsGamePaused = false;
+
+	DamageFXAlpha = 0.0f;
+	DamageFXTime = 0.5f;
+	DamageFXTimer = 0.0f;
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -192,6 +196,15 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 			bDamageMultiplierFalling = false;
 		}
 	}
+	if (DamageFXTimer > 0.0f)
+	{
+		DamageFXAlpha = DamageFXCurve(1.0f - DamageFXTimer / DamageFXTime);
+		DamageFXTimer -= DeltaSeconds;
+		if (DamageFXTimer <= 0.0f)
+		{
+			DamageFXAlpha = 0.0f;
+		}
+	}
 	Super::Tick(DeltaSeconds);
 }
 
@@ -259,6 +272,23 @@ float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x)
 	return (x >= 0.0f && x <= 1.0f) ? (PI / 2.0f) * FMath::Sin(PI * x) : 0.0f;
 	//return (x < 0.5f ? 4.0f * x : 4.0f - 4.0f * x);
 	//return 1.0;
+}
+
+inline float AHypercubeCharacter::DamageFXCurve(float x)
+{
+	if (x >= 0.0f && x <= 1.0f)
+	{
+		if (x < 0.2f)
+		{
+			return 2.5f * x;
+		}
+		if (x < 0.5f)
+		{
+			return 0.5f;
+		}
+		return 1.0f - x;
+	}
+	return 0.0f;
 }
 
 void AHypercubeCharacter::Dash()
@@ -405,6 +435,7 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 	ActivateDebugDamageIndicator();
 	bIsInvincible = true;
 	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
+	DamageFXTimer = DamageFXTime;
 	if (Health <= 0.0f)
 	{
 		PlayDeath();

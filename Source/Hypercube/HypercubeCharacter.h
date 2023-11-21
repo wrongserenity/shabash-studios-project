@@ -156,6 +156,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bCanAttack;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	float DamageFXTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	float DamageFXAlpha;
+
 protected:
 
 	class UCharacterMovementComponent* MoveComp;
@@ -186,6 +192,8 @@ protected:
 
 	TSet<class ABase_NPC_SimpleChase*> EnemyChasing;
 
+	float DamageFXTimer;
+
 	FTimerHandle Debug_DamageIndicatorTimerHandle;
 
 protected:
@@ -198,6 +206,7 @@ protected:
 	void MoveRight(float Value);
 
 	inline float DashVelocityCurve(float x); // f(x) where int_0^1(f(x))dx = 1
+	inline float DamageFXCurve(float x);
 
 	void Dash();
 	void AllowMovingWhileDash();

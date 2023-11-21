@@ -33,6 +33,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	JumpTime = 2.0f;
 
 	AggroRadius = 800.0f;
+	AggroTime = 0.5f;
 
 	NoticeCollision = CreateAbstractDefaultSubobject<USphereComponent>(TEXT("Notice Collision"));
 	NoticeCollision->AttachTo(RootComponent);
@@ -59,7 +60,8 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Debug_AttackCollision->SetVisibility(false);
 	Debug_AttackCollision->SetActive(false);
 
-	Phase = EAttackPhase::NotAttacking;
+	MovePhase = EEnemyPhase::None;
+	AttackPhase = EAttackPhase::NotAttacking;
 	AttackTarget = nullptr;
 
 	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
@@ -129,14 +131,18 @@ void ABase_NPC_SimpleChase::ForceTickDisable()
 
 void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
 {
-	if (Phase != EAttackPhase::NotAttacking)
+	if (AttackPhase != EAttackPhase::NotAttacking)
 	{
 		TickRotateToTarget(DeltaSeconds);
-		if (Phase == EAttackPhase::Attacking)
+		if (AttackPhase == EAttackPhase::Attacking)
 		{
 			CheckPlayerHit();
 			TickMoveForward(DeltaSeconds);
 		}
+	}
+	if (MovePhase == EEnemyPhase::Noticing)
+	{
+		TickRotateToTarget(DeltaSeconds);
 	}
 	Super::Tick(DeltaSeconds);
 }
@@ -204,32 +210,41 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 void ABase_NPC_SimpleChase::OnNotice()
 {
 	AttackTarget->OnEnemyAggro(this);
+	MovePhase = EEnemyPhase::Noticing;
+	SetTickState(true);
+	GetWorld()->GetTimerManager().SetTimer(NoticeTimerHandle, this, &ABase_NPC_SimpleChase::AfterNotice, AggroTime, false);
+}
+
+void ABase_NPC_SimpleChase::AfterNotice()
+{
+	MovePhase = EEnemyPhase::Chasing;
+	SetTickState(false);
 }
 
 void ABase_NPC_SimpleChase::Attack()
 {
-	switch (Phase)
+	switch (AttackPhase)
 	{
 	case EAttackPhase::NotAttacking:
-		Phase = EAttackPhase::Opener;
+		AttackPhase = EAttackPhase::Opener;
 		SetTickState(true);
 		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.OpenerTime, false);
 		break;
 	case EAttackPhase::Opener:
-		Phase = EAttackPhase::Attacking;
+		AttackPhase = EAttackPhase::Attacking;
 		SetDebugAttackCollision(false);
 		SetAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AttackTime, false);
 		break;
 	case EAttackPhase::Attacking:
-		Phase = EAttackPhase::AfterAttack;
+		AttackPhase = EAttackPhase::AfterAttack;
 		SetAttackCollision(false);
 		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AfterAttackTime, false);
 		break;
 	case EAttackPhase::AfterAttack:
-		Phase = EAttackPhase::NotAttacking;
+		AttackPhase = EAttackPhase::NotAttacking;
 		SetDebugAttackCollision(false);
 		SetTickState(false);
 		AttackEndDelegate.Broadcast(true);

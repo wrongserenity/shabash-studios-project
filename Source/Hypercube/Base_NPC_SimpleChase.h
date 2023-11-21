@@ -43,6 +43,14 @@ enum class EAttackPhase : uint8
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
 
+UENUM(BlueprintType)
+enum class EEnemyPhase : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Noticing UMETA(DisplayName = "Noticing"),
+	Chasing UMETA(DisplayName = "Chasing")
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJumpEnd, bool, success);
 
@@ -94,6 +102,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroRadius;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
+	float AggroTime;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
 
@@ -104,8 +115,11 @@ protected:
 
 	uint8 TickSemaphore;
 
+	FTimerHandle NoticeTimerHandle;
+	EEnemyPhase MovePhase;
+
 	FTimerHandle AttackTimerHandle;
-	EAttackPhase Phase;
+	EAttackPhase AttackPhase;
 	class AHypercubeCharacter* AttackTarget;
 
 	FTimerHandle DelayedInitTimerHandle;
@@ -142,6 +156,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void OnNotice();
+
+	UFUNCTION(BlueprintCallable)
+	void AfterNotice();
 
 	UFUNCTION(BlueprintCallable)
 	void Attack();
