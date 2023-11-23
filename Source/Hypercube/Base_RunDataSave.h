@@ -29,6 +29,9 @@ struct FLevelData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float OnDeathMultiplicator;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayTime;
+
 	void Log();
 };
 
