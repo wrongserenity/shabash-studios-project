@@ -117,6 +117,9 @@ public:
 	FAttackStats SimpleAttack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebug;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
 
 protected:

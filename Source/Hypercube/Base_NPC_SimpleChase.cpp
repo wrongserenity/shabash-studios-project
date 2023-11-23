@@ -72,6 +72,8 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Debug_DamageIndicator->SetVisibility(false);
 
 	Debug_DamageIndicatorTime = 3.0f;
+
+	bDebug = false;
 }
 
 // Called when the game starts or when spawned
@@ -186,20 +188,29 @@ void ABase_NPC_SimpleChase::OnEndDebugDamageIndicatorTimer()
 
 void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
 {
-	AttackCollision->SetVisibility(Active);
+	if (bDebug)
+	{
+		AttackCollision->SetVisibility(Active);
+	}
 	AttackCollision->SetActive(Active);
 }
 
 void ABase_NPC_SimpleChase::SetDebugAttackCollision(bool Active)
 {
-	Debug_AttackCollision->SetVisibility(Active);
-	Debug_AttackCollision->SetActive(Active);
+	if (bDebug)
+	{
+		Debug_AttackCollision->SetVisibility(Active);
+		Debug_AttackCollision->SetActive(Active);
+	}
 }
 
 void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 {
 	Health -= Damage;
-	ActivateDebugDamageIndicator();
+	if (bDebug)
+	{
+		ActivateDebugDamageIndicator();
+	}
 	EnemyDamagedDelegate.Broadcast();
 	if (Health <= 0.0f)
 	{

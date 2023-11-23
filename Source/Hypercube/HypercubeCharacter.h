@@ -160,6 +160,9 @@ public:
 	FPlayerAttackStats SimpleAttack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebug;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")

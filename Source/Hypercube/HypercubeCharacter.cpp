@@ -82,7 +82,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	bDamageMultiplierStays = false;
 	bDamageMultiplierFalling = false;
 
-	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
+	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 90.0f, 68.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
@@ -116,6 +116,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DamageFXAlpha = 0.0f;
 	DamageFXTime = 0.5f;
 	DamageFXTimer = 0.0f;
+
+	bDebug = false;
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -353,14 +355,20 @@ void AHypercubeCharacter::OnEndDashCooldown()
 
 void AHypercubeCharacter::SetAttackCollision(bool Activate)
 {
-	AttackCollision->SetVisibility(Activate);
+	if (bDebug)
+	{
+		AttackCollision->SetVisibility(Activate);
+	}
 	AttackCollision->SetActive(Activate);
 }
 
 void AHypercubeCharacter::SetDebugAttackCollision(bool Activate)
 {
-	Debug_AttackCollision->SetVisibility(Activate);
-	Debug_AttackCollision->SetActive(Activate);
+	if (bDebug)
+	{
+		Debug_AttackCollision->SetVisibility(Activate);
+		Debug_AttackCollision->SetActive(Activate);
+	}
 }
 
 void AHypercubeCharacter::ReceiveAttackInput()
@@ -430,7 +438,10 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		return;
 	}
 	Health -= Damage;
-	ActivateDebugDamageIndicator();
+	if (bDebug)
+	{
+		ActivateDebugDamageIndicator();
+	}
 	bIsInvincible = true;
 	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
 	DamageFXTimer = DamageFXTime;
