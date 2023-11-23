@@ -174,6 +174,8 @@ void ABase_LevelController::SaveLevelData()
 	CurLevelData.EnemiesPercentageKilled = float(EnemiesKilled) / float(BeginEnemyCount);
 	UpdateMaxMultiplicator(Player->DamageMultiplier);
 	CurLevelData.OnDeathMultiplicator = Player->DamageMultiplier;
+	CurLevelData.OnDeathEnemyChasing = int((Player->DamageMultiplier - 1.0f) / Player->DamageMultiplierEnemyCost);
+	CurLevelData.PlayTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
 	LevelData.Add(CurLevelData);
 	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
 	if (SaveGameInstance)
@@ -243,5 +245,14 @@ float ABase_LevelController::GetDifficultyParameter()
 			++DeathCount;
 		}
 	}
-	return 0.0f;
+	int OnDeathChasing = LevelData.Last().OnDeathEnemyChasing;
+	float PlayTime = LevelData.Last().PlayTime;
+	bool IsWon = LevelData.Last().PlayerWon;
+
+	float DeathCountParameter = GetDifficultyParameterFrom(DeathCount, DeathCountBounds, DeathCountValues) * DeathCountCost;
+	float OnDeathChasingParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(OnDeathChasing, OnDeathEnemyAggroBounds, OnDeathEnemyAggroValues)) * OnDeathEnemyAggroCost;
+	float PlayTimeParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(PlayTime, PlayTimeBounds, PlayTimeValues)) * PlayTimeCost;
+
+	UE_LOG(LogTemp, Warning, TEXT("%f, %f, %f"), DeathCountParameter, OnDeathChasingParameter, PlayTimeParameter);
+	return DeathCountParameter + OnDeathChasingParameter + PlayTimeParameter;
 }

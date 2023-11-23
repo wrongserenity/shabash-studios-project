@@ -30,6 +30,9 @@ struct FLevelData
 	float OnDeathMultiplicator;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float OnDeathEnemyChasing;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayTime;
 
 	void Log();

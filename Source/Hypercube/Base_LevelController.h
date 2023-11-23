@@ -181,9 +181,9 @@ public:
 };
 
 template<typename T>
-int GetAsc(const TArray<T>& Arr)
+int GetAsc(const TArray<T>& Arr) // returns 1 when array is increasing, -1 when decreasing, else 0
 {
-	if (Arr.Num < 2)
+	if (Arr.Num() < 2)
 	{
 		return 1;
 	}
@@ -212,7 +212,7 @@ int GetAsc(const TArray<T>& Arr)
 }
 
 template<typename T>
-float GetDifficultyParameterFrom(T Val, const TArray<T>& Bounds, const TArray<float>& Values)
+float GetDifficultyParameterFrom(T Val, const TArray<T>& Bounds, const TArray<float>& Values) // returns unscaled difficulty parameter from given bounds and parameter values arrays
 {
 	if (Bounds.Num() != Values.Num())
 	{
