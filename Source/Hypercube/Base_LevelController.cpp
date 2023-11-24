@@ -211,7 +211,6 @@ float ABase_LevelController::GetPlayerHealthValue() const
 	return NewHealth;
 }
 
-	float LastPercentage = LevelData.Last().EnemiesPercentageKilled;
 void ABase_LevelController::SetNoticeSoundTurnOff()
 {
 	bEnemyCanNoticeSound = false;
