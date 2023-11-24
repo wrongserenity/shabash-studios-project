@@ -123,6 +123,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category =  "Stats | Health")
 	float InvincAfterDamage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float Vampirism;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashDistance;
 
@@ -274,5 +277,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveAttackInput();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int GetEnemyChasingCount() const;
 };
 

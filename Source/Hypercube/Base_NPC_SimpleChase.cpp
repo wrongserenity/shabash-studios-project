@@ -283,3 +283,8 @@ class ABase_LevelController* ABase_NPC_SimpleChase::GetLevelController() const
 {
 	return LevelController;
 }
+
+class USphereComponent* ABase_NPC_SimpleChase::GetNoticeCollision() const
+{
+	return NoticeCollision;
+}

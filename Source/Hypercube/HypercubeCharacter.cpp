@@ -64,6 +64,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
+	Vampirism = 0.0f;
 	bIsInvincible = false;
 
 	DashDistance = 700.0f;
@@ -556,4 +557,9 @@ FString AHypercubeCharacter::GetScoreboard(int Num) const
 ABase_LevelController* AHypercubeCharacter::GetLevelController() const
 {
 	return LevelController;
+}
+
+int AHypercubeCharacter::GetEnemyChasingCount() const
+{
+	return EnemyChasing.Num();
 }

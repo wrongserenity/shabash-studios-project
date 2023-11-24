@@ -167,9 +167,6 @@ public:
 	float GetPlayerHealthValue() const;
 
 	UFUNCTION(BlueprintCallable)
-	float GetEnemyPercentage() const;
-
-	UFUNCTION(BlueprintCallable)
 	void SetNoticeSoundTurnOff();
 
 	UFUNCTION(BlueprintCallable)
@@ -178,6 +175,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	float GetDifficultyParameter();
 
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerParams();
+
+	UFUNCTION(BlueprintCallable)
+	void SetEnemyParams(class ABase_NPC_SimpleChase* Enemy);
 };
 
 template<typename T>
@@ -234,4 +236,27 @@ float GetDifficultyParameterFrom(T Val, const TArray<T>& Bounds, const TArray<fl
 		}
 	}
 	return ValuesAsc ? 1.0f : 0.0f;
+}
+
+template<typename T>
+T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>& Values) // returns game parameter from given difficulty parameter, bounds and values arrays
+{
+	if (Bounds.Num() != Values.Num())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Adaptive difficulty: Bounds array must be the same length as values array!"));
+		return T();
+	}
+	if (GetAsc(Bounds) != 1)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Adaptive difficulty: Bounds array must be monotone"));
+		return T();
+	}
+	for (int i = 1; i < Bounds.Num(); ++i)
+	{
+		if (Val < Bounds[i])
+		{
+			return Values[i - 1];
+		}
+	}
+	return Values.Last();
 }

@@ -3,7 +3,9 @@
 #include "HypercubeCharacter.h"
 #include "Base_NPC_SimpleChase.h"
 #include "Base_EnemySpawnPoint.h"
-#include "Containers/SortedMap.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Math/UnrealMathUtility.h"
+#include "Components/SphereComponent.h"
 
 ABase_LevelController::ABase_LevelController()
 {
@@ -82,7 +84,8 @@ void ABase_LevelController::SpawnEnemies()
 	{
 		SpawnPoints.Swap(i, FMath::RandRange(i, SpawnPoints.Num() - 1));
 	}
-	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * GetEnemyPercentage());
+	float EnemyPercentage = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyCountPercentageValues);
+	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * EnemyPercentage);
 	BeginEnemyCount = BeginEnemyCount > SpawnPoints.Num() ? SpawnPoints.Num() : BeginEnemyCount;
 	CurLevelData.TotalEnemies = BeginEnemyCount;
 	UE_LOG(LogTemp, Warning, TEXT("Enemies spawned: %d"), BeginEnemyCount);
@@ -102,6 +105,7 @@ void ABase_LevelController::SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint)
 	if (Enemy)
 	{
 		Enemy->LevelController = this;
+		SetEnemyParams(Enemy);
 		Enemies.Add(Enemy);
 	}
 }
@@ -141,6 +145,7 @@ void ABase_LevelController::SetPlayerCharacter(class AHypercubeCharacter* Player
 {
 	Player = PlayerCharacter;
 	Player->Health = Player->MaxHealth = GetPlayerHealthValue();
+	SetPlayerParams();
 }
 
 void ABase_LevelController::OnPlayerDeath()
@@ -174,7 +179,7 @@ void ABase_LevelController::SaveLevelData()
 	CurLevelData.EnemiesPercentageKilled = float(EnemiesKilled) / float(BeginEnemyCount);
 	UpdateMaxMultiplicator(Player->DamageMultiplier);
 	CurLevelData.OnDeathMultiplicator = Player->DamageMultiplier;
-	CurLevelData.OnDeathEnemyChasing = int((Player->DamageMultiplier - 1.0f) / Player->DamageMultiplierEnemyCost);
+	CurLevelData.OnDeathEnemyChasing = Player->GetEnemyChasingCount();
 	CurLevelData.PlayTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
 	LevelData.Add(CurLevelData);
 	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
@@ -206,20 +211,7 @@ float ABase_LevelController::GetPlayerHealthValue() const
 	return NewHealth;
 }
 
-float ABase_LevelController::GetEnemyPercentage() const
-{
-	if (!LevelData.Num())
-	{
-		return 0.8f;
-	}
 	float LastPercentage = LevelData.Last().EnemiesPercentageKilled;
-	if (LastPercentage < 0.33f)
-	{
-		return 0.33f;
-	}
-	return LastPercentage;
-}
-
 void ABase_LevelController::SetNoticeSoundTurnOff()
 {
 	bEnemyCanNoticeSound = false;
@@ -233,6 +225,10 @@ void ABase_LevelController::OnEndNoticeSoundTurnedOff()
 
 float ABase_LevelController::GetDifficultyParameter()
 {
+	if (!FMath::IsNearlyEqual(DeathCountCost + OnDeathEnemyAggroCost + PlayTimeCost, 1.0f))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Sum of input parameter costs must be equal to 1!"));
+	}
 	if (!LevelData.Num())
 	{
 		return 0.5f;
@@ -255,4 +251,18 @@ float ABase_LevelController::GetDifficultyParameter()
 
 	UE_LOG(LogTemp, Warning, TEXT("%f, %f, %f"), DeathCountParameter, OnDeathChasingParameter, PlayTimeParameter);
 	return DeathCountParameter + OnDeathChasingParameter + PlayTimeParameter;
+}
+
+void ABase_LevelController::SetPlayerParams()
+{
+	Player->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVelocityValues);
+	Player->DamageMultiplierEnemyCost *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerDamageMultiplerValues);
+	Player->Vampirism = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVampirismValues);
+}
+
+void ABase_LevelController::SetEnemyParams(class ABase_NPC_SimpleChase* Enemy)
+{
+	Enemy->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyVelocityValues);
+	Enemy->SimpleAttack.Damage *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyDamageValues);
+	Enemy->GetNoticeCollision()->SetSphereRadius(Enemy->AggroRadius * GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
 }
