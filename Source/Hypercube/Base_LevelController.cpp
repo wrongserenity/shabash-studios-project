@@ -20,7 +20,7 @@ ABase_LevelController::ABase_LevelController()
 	NextLevelName = TEXT("level1");
 
 	SaveSlotName = "RunDataSaveSlot";
-	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0.0f };
+	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };
 
 	EnemiesKilled = 0;
 
@@ -248,7 +248,8 @@ float ABase_LevelController::GetDifficultyParameter()
 	float OnDeathChasingParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(OnDeathChasing, OnDeathEnemyAggroBounds, OnDeathEnemyAggroValues)) * OnDeathEnemyAggroCost;
 	float PlayTimeParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(PlayTime, PlayTimeBounds, PlayTimeValues)) * PlayTimeCost;
 
-	UE_LOG(LogTemp, Warning, TEXT("%f, %f, %f"), DeathCountParameter, OnDeathChasingParameter, PlayTimeParameter);
+	UE_LOG(LogTemp, Warning, TEXT("In: %d, %d, %f"), DeathCount, OnDeathChasing, PlayTime);
+	UE_LOG(LogTemp, Warning, TEXT("Out: %f, %f, %f"), DeathCountParameter, OnDeathChasingParameter, PlayTimeParameter);
 	return DeathCountParameter + OnDeathChasingParameter + PlayTimeParameter;
 }
 
