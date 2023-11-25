@@ -64,6 +64,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
+	Vampirism = 0.0f;
 	bIsInvincible = false;
 
 	DashDistance = 700.0f;
@@ -507,6 +508,8 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
 	Score += BaseScoreForEnemy * DamageMultiplier;
+	Health += Vampirism * Enemy->MaxHealth;
+	Health = Health > MaxHealth ? MaxHealth : Health;
 	if (LevelController)
 	{
 		LevelController->RemoveEnemy(Enemy);
@@ -567,4 +570,9 @@ FString AHypercubeCharacter::GetScoreboard(int Num) const
 ABase_LevelController* AHypercubeCharacter::GetLevelController() const
 {
 	return LevelController;
+}
+
+int AHypercubeCharacter::GetEnemyChasingCount() const
+{
+	return EnemyChasing.Num();
 }
