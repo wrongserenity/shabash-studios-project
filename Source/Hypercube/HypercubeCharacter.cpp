@@ -508,6 +508,8 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
 	Score += BaseScoreForEnemy * DamageMultiplier;
+	Health += Vampirism * Enemy->MaxHealth;
+	Health = Health > MaxHealth ? MaxHealth : Health;
 	if (LevelController)
 	{
 		LevelController->RemoveEnemy(Enemy);

@@ -232,14 +232,12 @@ float ABase_LevelController::GetDifficultyParameter()
 	{
 		return 0.5f;
 	}
-	int DeathCount = 0;
-	for (int i = 0; i < LevelData.Num(); ++i)
+	int i = LevelData.Num() - 1;
+	while (i >= 0 && !LevelData[i].PlayerWon)
 	{
-		if (!LevelData[i].PlayerWon)
-		{
-			++DeathCount;
-		}
+		--i;
 	}
+	int DeathCount = LevelData.Num() - 1 - i;
 	int OnDeathChasing = LevelData.Last().OnDeathEnemyChasing;
 	float PlayTime = LevelData.Last().PlayTime;
 	bool IsWon = LevelData.Last().PlayerWon;
