@@ -59,13 +59,12 @@ AHypercubeCharacter::AHypercubeCharacter()
 	MovementPhase = EPlayerMovementPhase::Walking;
 	AttackPhase = EPlayerAttackPhase::None;
 	
-	
-	bCanAttack = true;
 	bCanDash = true;
 	bDashMovementBlocked = true;
 
 	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
+	Vampirism = 0.0f;
 	bIsInvincible = false;
 
 	DashDistance = 700.0f;
@@ -84,7 +83,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	bDamageMultiplierStays = false;
 	bDamageMultiplierFalling = false;
 
-	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
+	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 90.0f, 68.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
@@ -114,6 +113,12 @@ AHypercubeCharacter::AHypercubeCharacter()
 	//DelayedInitTime = 0.2f;
 
 	bIsGamePaused = false;
+
+	DamageFXAlpha = 0.0f;
+	DamageFXTime = 0.5f;
+	DamageFXTimer = 0.0f;
+
+	bDebug = false;
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -192,6 +197,15 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 			bDamageMultiplierFalling = false;
 		}
 	}
+	if (DamageFXTimer > 0.0f)
+	{
+		DamageFXAlpha = DamageFXCurve(1.0f - DamageFXTimer / DamageFXTime);
+		DamageFXTimer -= DeltaSeconds;
+		if (DamageFXTimer <= 0.0f)
+		{
+			DamageFXAlpha = 0.0f;
+		}
+	}
 	Super::Tick(DeltaSeconds);
 }
 
@@ -261,6 +275,23 @@ float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x)
 	//return 1.0;
 }
 
+inline float AHypercubeCharacter::DamageFXCurve(float x)
+{
+	if (x >= 0.0f && x <= 1.0f)
+	{
+		if (x < 0.2f)
+		{
+			return 2.5f * x;
+		}
+		if (x < 0.5f)
+		{
+			return 0.5f;
+		}
+		return 1.0f - x;
+	}
+	return 0.0f;
+}
+
 void AHypercubeCharacter::Dash()
 {
 	if (!bCanDash || MovementPhase != EPlayerMovementPhase::Walking)
@@ -268,6 +299,7 @@ void AHypercubeCharacter::Dash()
 		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
 	}
+	PlayerActionDelegate.Broadcast(EPlayerAction::Dash);
 	FVector Forward = FollowCamera->GetForwardVector();
 	Forward.Z = 0.0f;
 	Forward.Normalize();
@@ -324,14 +356,20 @@ void AHypercubeCharacter::OnEndDashCooldown()
 
 void AHypercubeCharacter::SetAttackCollision(bool Activate)
 {
-	AttackCollision->SetVisibility(Activate);
+	if (bDebug)
+	{
+		AttackCollision->SetVisibility(Activate);
+	}
 	AttackCollision->SetActive(Activate);
 }
 
 void AHypercubeCharacter::SetDebugAttackCollision(bool Activate)
 {
-	Debug_AttackCollision->SetVisibility(Activate);
-	Debug_AttackCollision->SetActive(Activate);
+	if (bDebug)
+	{
+		Debug_AttackCollision->SetVisibility(Activate);
+		Debug_AttackCollision->SetActive(Activate);
+	}
 }
 
 void AHypercubeCharacter::ReceiveAttackInput()
@@ -341,7 +379,7 @@ void AHypercubeCharacter::ReceiveAttackInput()
 		return;
 	}
 	MovementPhase = EPlayerMovementPhase::Attacking;
-	bCanAttack = false;
+	PlayerActionDelegate.Broadcast(EPlayerAction::Attack);
 	Attack();
 }
 
@@ -377,7 +415,6 @@ void AHypercubeCharacter::Attack()
 void AHypercubeCharacter::OnEndAttack()
 {
 	MovementPhase = EPlayerMovementPhase::Walking;
-	bCanAttack = true;
 }
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
@@ -402,9 +439,14 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		return;
 	}
 	Health -= Damage;
-	ActivateDebugDamageIndicator();
+	if (bDebug)
+	{
+		ActivateDebugDamageIndicator();
+	}
 	bIsInvincible = true;
 	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
+	DamageFXTimer = DamageFXTime;
+	PlayerActionDelegate.Broadcast(EPlayerAction::Damaged);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -423,7 +465,6 @@ void AHypercubeCharacter::PlayDeath()
 	MovementPhase = EPlayerMovementPhase::None;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_None);
 	bCanDash = false;
-	bCanAttack = false;
 	LevelController->OnPlayerDeath();
 	PlayerDeathDelegate.Broadcast();
 }
@@ -467,6 +508,8 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
 	Score += BaseScoreForEnemy * DamageMultiplier;
+	Health += Vampirism * Enemy->MaxHealth;
+	Health = Health > MaxHealth ? MaxHealth : Health;
 	if (LevelController)
 	{
 		LevelController->RemoveEnemy(Enemy);
@@ -527,4 +570,9 @@ FString AHypercubeCharacter::GetScoreboard(int Num) const
 ABase_LevelController* AHypercubeCharacter::GetLevelController() const
 {
 	return LevelController;
+}
+
+int AHypercubeCharacter::GetEnemyChasingCount() const
+{
+	return EnemyChasing.Num();
 }

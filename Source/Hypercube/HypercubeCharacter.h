@@ -24,6 +24,14 @@ enum class EPlayerAttackPhase : uint8
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
 
+UENUM(BlueprintType)
+enum class EPlayerAction : uint8
+{
+	Attack UMETA(DisplayName = "Attack"),
+	Dash UMETA(DisplayName = "Dash"),
+	Damaged UMETA(DisplayName = "Damaged")
+};
+
 USTRUCT(BlueprintType)
 struct FPlayerAttackStats
 {
@@ -51,6 +59,7 @@ struct FPlayerAttackStats
 	float AttackAngle;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerAction, EPlayerAction, Action);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPause, bool, bIsPaused);
 
@@ -89,6 +98,9 @@ public:
 	class ABase_LevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnPlayerAction PlayerActionDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnPlayerDeath PlayerDeathDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
@@ -110,6 +122,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category =  "Stats | Health")
 	float InvincAfterDamage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float Vampirism;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashDistance;
@@ -148,13 +163,19 @@ public:
 	FPlayerAttackStats SimpleAttack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebug;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsGamePaused;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	bool bCanAttack;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	float DamageFXTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	float DamageFXAlpha;
 
 protected:
 
@@ -186,6 +207,8 @@ protected:
 
 	TSet<class ABase_NPC_SimpleChase*> EnemyChasing;
 
+	float DamageFXTimer;
+
 	FTimerHandle Debug_DamageIndicatorTimerHandle;
 
 protected:
@@ -198,6 +221,7 @@ protected:
 	void MoveRight(float Value);
 
 	inline float DashVelocityCurve(float x); // f(x) where int_0^1(f(x))dx = 1
+	inline float DamageFXCurve(float x);
 
 	void Dash();
 	void AllowMovingWhileDash();
@@ -256,5 +280,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveAttackInput();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int GetEnemyChasingCount() const;
 };
 

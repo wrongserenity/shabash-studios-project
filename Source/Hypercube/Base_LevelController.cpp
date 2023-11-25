@@ -3,6 +3,9 @@
 #include "HypercubeCharacter.h"
 #include "Base_NPC_SimpleChase.h"
 #include "Base_EnemySpawnPoint.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Math/UnrealMathUtility.h"
+#include "Components/SphereComponent.h"
 
 ABase_LevelController::ABase_LevelController()
 {
@@ -10,17 +13,48 @@ ABase_LevelController::ABase_LevelController()
 
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
+	NoticeSoundTurnOffTime = 1.0f;
+
+	bEnemyCanNoticeSound = true;
+
 	NextLevelName = TEXT("level1");
 
 	SaveSlotName = "RunDataSaveSlot";
-	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f };
+	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };
 
 	EnemiesKilled = 0;
+
+	DifficultyParameter = 0.5f;
+
+	DeathCountBounds = { 1, 3, 5, 10 };
+	DeathCountValues = { 1.0f, 0.7f, 0.5f, 0.3f };
+	DeathCountCost = 0.4f;
+
+	OnDeathEnemyAggroBounds = { 20, 15, 10, 5 };
+	OnDeathEnemyAggroValues = { 1.0f, 0.7f, 0.5f, 0.3f };
+	OnDeathEnemyAggroCost = 0.4f;
+
+	PlayTimeBounds = { 600.0f, 300.0f, 60.0f };
+	PlayTimeValues = { 0.7f, 0.5f, 0.3f };
+	PlayTimeCost = 0.2f;
+
+	DifficultyParameterBounds = { 0.0f, 0.15f, 0.35f, 0.5f, 0.65f, 0.85f, 1.0f };
+
+	PlayerVelocityValues = { 1.1f, 1.0f, 1.0f, 1.0f, 1.0f, 0.9f, 0.9f };
+	PlayerDamageMultiplerValues = { 1.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f };
+	PlayerVampirismValues = { 0.05f, 0.02f, 0.02f, 0.02f, 0.0f, 0.0f, 0.0f };
+
+	EnemyVelocityValues = { 0.8f, 0.8f, 0.8f, 1.0f, 1.0f, 1.0f, 1.2f };
+	EnemyDamageValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f, 1.5f };
+	EnemyNoticeRadiusValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f };
+	EnemyCountPercentageValues = { 0.3f, 0.3f, 0.7f, 0.7f, 1.0f, 1.0f, 1.0f };
+
 }
 
 void ABase_LevelController::BeginPlay()
 {
 	LoadLevelData();
+	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
 	Super::BeginPlay();
 }
@@ -50,7 +84,8 @@ void ABase_LevelController::SpawnEnemies()
 	{
 		SpawnPoints.Swap(i, FMath::RandRange(i, SpawnPoints.Num() - 1));
 	}
-	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * GetEnemyPercentage());
+	float EnemyPercentage = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyCountPercentageValues);
+	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * EnemyPercentage);
 	BeginEnemyCount = BeginEnemyCount > SpawnPoints.Num() ? SpawnPoints.Num() : BeginEnemyCount;
 	CurLevelData.TotalEnemies = BeginEnemyCount;
 	UE_LOG(LogTemp, Warning, TEXT("Enemies spawned: %d"), BeginEnemyCount);
@@ -70,6 +105,7 @@ void ABase_LevelController::SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint)
 	if (Enemy)
 	{
 		Enemy->LevelController = this;
+		SetEnemyParams(Enemy);
 		Enemies.Add(Enemy);
 	}
 }
@@ -109,11 +145,13 @@ void ABase_LevelController::SetPlayerCharacter(class AHypercubeCharacter* Player
 {
 	Player = PlayerCharacter;
 	Player->Health = Player->MaxHealth = GetPlayerHealthValue();
+	SetPlayerParams();
 }
 
 void ABase_LevelController::OnPlayerDeath()
 {
 	CurLevelData.PlayerWon = false;
+	SaveLevelData();
 	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
 }
 
@@ -125,6 +163,7 @@ void ABase_LevelController::AfterPlayerDeath()
 void ABase_LevelController::OnAllEnemiesDead()
 {
 	CurLevelData.PlayerWon = true;
+	SaveLevelData();
 	AllEnemiesDeadDelegate.Broadcast();
 	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterAllEnemiesDead, AfterAllEnemiesDeadTime, false);
 }
@@ -138,8 +177,10 @@ void ABase_LevelController::SaveLevelData()
 {
 	CurLevelData.Score = Player->Score;
 	CurLevelData.EnemiesPercentageKilled = float(EnemiesKilled) / float(BeginEnemyCount);
-	CurLevelData.OnDeathMultiplicator = Player->DamageMultiplier;
 	UpdateMaxMultiplicator(Player->DamageMultiplier);
+	CurLevelData.OnDeathMultiplicator = Player->DamageMultiplier;
+	CurLevelData.OnDeathEnemyChasing = Player->GetEnemyChasingCount();
+	CurLevelData.PlayTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
 	LevelData.Add(CurLevelData);
 	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
 	if (SaveGameInstance)
@@ -151,7 +192,6 @@ void ABase_LevelController::SaveLevelData()
 
 void ABase_LevelController::LoadNewLevel()
 {
-	SaveLevelData();
 	UGameplayStatics::OpenLevel(GetWorld(), NextLevelName);
 }
 
@@ -171,16 +211,56 @@ float ABase_LevelController::GetPlayerHealthValue() const
 	return NewHealth;
 }
 
-float ABase_LevelController::GetEnemyPercentage() const
+void ABase_LevelController::SetNoticeSoundTurnOff()
 {
+	bEnemyCanNoticeSound = false;
+	GetWorld()->GetTimerManager().SetTimer(NoticeSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndNoticeSoundTurnedOff, NoticeSoundTurnOffTime, false);
+}
+
+void ABase_LevelController::OnEndNoticeSoundTurnedOff()
+{
+	bEnemyCanNoticeSound = true;
+}
+
+float ABase_LevelController::GetDifficultyParameter()
+{
+	if (!FMath::IsNearlyEqual(DeathCountCost + OnDeathEnemyAggroCost + PlayTimeCost, 1.0f))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Sum of input parameter costs must be equal to 1!"));
+	}
 	if (!LevelData.Num())
 	{
-		return 0.8f;
+		return 0.5f;
 	}
-	float LastPercentage = LevelData.Last().EnemiesPercentageKilled;
-	if (LastPercentage < 0.33f)
+	int i = LevelData.Num() - 1;
+	while (i >= 0 && !LevelData[i].PlayerWon)
 	{
-		return 0.33f;
+		--i;
 	}
-	return LastPercentage;
+	int DeathCount = LevelData.Num() - 1 - i;
+	int OnDeathChasing = LevelData.Last().OnDeathEnemyChasing;
+	float PlayTime = LevelData.Last().PlayTime;
+	bool IsWon = LevelData.Last().PlayerWon;
+
+	float DeathCountParameter = GetDifficultyParameterFrom(DeathCount, DeathCountBounds, DeathCountValues) * DeathCountCost;
+	float OnDeathChasingParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(OnDeathChasing, OnDeathEnemyAggroBounds, OnDeathEnemyAggroValues)) * OnDeathEnemyAggroCost;
+	float PlayTimeParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(PlayTime, PlayTimeBounds, PlayTimeValues)) * PlayTimeCost;
+
+	UE_LOG(LogTemp, Warning, TEXT("In: %d, %d, %f"), DeathCount, OnDeathChasing, PlayTime);
+	UE_LOG(LogTemp, Warning, TEXT("Out: %f, %f, %f"), DeathCountParameter, OnDeathChasingParameter, PlayTimeParameter);
+	return DeathCountParameter + OnDeathChasingParameter + PlayTimeParameter;
+}
+
+void ABase_LevelController::SetPlayerParams()
+{
+	Player->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVelocityValues);
+	Player->DamageMultiplierEnemyCost *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerDamageMultiplerValues);
+	Player->Vampirism = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVampirismValues);
+}
+
+void ABase_LevelController::SetEnemyParams(class ABase_NPC_SimpleChase* Enemy)
+{
+	Enemy->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyVelocityValues);
+	Enemy->SimpleAttack.Damage *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyDamageValues);
+	Enemy->GetNoticeCollision()->SetSphereRadius(Enemy->AggroRadius * GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
 }

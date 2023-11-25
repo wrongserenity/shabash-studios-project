@@ -33,6 +33,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	JumpTime = 2.0f;
 
 	AggroRadius = 800.0f;
+	AggroTime = 0.5f;
 
 	NoticeCollision = CreateAbstractDefaultSubobject<USphereComponent>(TEXT("Notice Collision"));
 	NoticeCollision->AttachTo(RootComponent);
@@ -59,7 +60,8 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Debug_AttackCollision->SetVisibility(false);
 	Debug_AttackCollision->SetActive(false);
 
-	Phase = EAttackPhase::NotAttacking;
+	MovePhase = EEnemyPhase::None;
+	AttackPhase = EAttackPhase::NotAttacking;
 	AttackTarget = nullptr;
 
 	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
@@ -70,6 +72,8 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Debug_DamageIndicator->SetVisibility(false);
 
 	Debug_DamageIndicatorTime = 3.0f;
+
+	bDebug = false;
 }
 
 // Called when the game starts or when spawned
@@ -86,17 +90,16 @@ void ABase_NPC_SimpleChase::DelayedInit()
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
 
-	//TArray<AActor*> FoundActors;
-	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
-	//if (FoundActors.Num())
-	//{
-	//	LevelController = Cast<ABase_LevelController>(FoundActors[0]);
-	//	LevelController->AddEnemy(this);
-	//}
-	//else
-	//{
-	//	LevelController = nullptr;
-	//}
+	if (!LevelController)
+	{
+		TArray<AActor*> FoundActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+		if (FoundActors.Num())
+		{
+			LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+			LevelController->AddEnemy(this);
+		}
+	}
 }
 
 void ABase_NPC_SimpleChase::SetTickState(bool Activate)
@@ -129,14 +132,18 @@ void ABase_NPC_SimpleChase::ForceTickDisable()
 
 void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
 {
-	if (Phase != EAttackPhase::NotAttacking)
+	if (AttackPhase != EAttackPhase::NotAttacking)
 	{
 		TickRotateToTarget(DeltaSeconds);
-		if (Phase == EAttackPhase::Attacking)
+		if (AttackPhase == EAttackPhase::Attacking)
 		{
 			CheckPlayerHit();
 			TickMoveForward(DeltaSeconds);
 		}
+	}
+	if (MovePhase == EEnemyPhase::Noticing)
+	{
+		TickRotateToTarget(DeltaSeconds);
 	}
 	Super::Tick(DeltaSeconds);
 }
@@ -181,20 +188,30 @@ void ABase_NPC_SimpleChase::OnEndDebugDamageIndicatorTimer()
 
 void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
 {
-	AttackCollision->SetVisibility(Active);
+	if (bDebug)
+	{
+		AttackCollision->SetVisibility(Active);
+	}
 	AttackCollision->SetActive(Active);
 }
 
 void ABase_NPC_SimpleChase::SetDebugAttackCollision(bool Active)
 {
-	Debug_AttackCollision->SetVisibility(Active);
-	Debug_AttackCollision->SetActive(Active);
+	if (bDebug)
+	{
+		Debug_AttackCollision->SetVisibility(Active);
+		Debug_AttackCollision->SetActive(Active);
+	}
 }
 
 void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 {
 	Health -= Damage;
-	ActivateDebugDamageIndicator();
+	if (bDebug)
+	{
+		ActivateDebugDamageIndicator();
+	}
+	EnemyDamagedDelegate.Broadcast();
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -204,32 +221,41 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 void ABase_NPC_SimpleChase::OnNotice()
 {
 	AttackTarget->OnEnemyAggro(this);
+	MovePhase = EEnemyPhase::Noticing;
+	SetTickState(true);
+	GetWorld()->GetTimerManager().SetTimer(NoticeTimerHandle, this, &ABase_NPC_SimpleChase::AfterNotice, AggroTime, false);
+}
+
+void ABase_NPC_SimpleChase::AfterNotice()
+{
+	MovePhase = EEnemyPhase::Chasing;
+	SetTickState(false);
 }
 
 void ABase_NPC_SimpleChase::Attack()
 {
-	switch (Phase)
+	switch (AttackPhase)
 	{
 	case EAttackPhase::NotAttacking:
-		Phase = EAttackPhase::Opener;
+		AttackPhase = EAttackPhase::Opener;
 		SetTickState(true);
 		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.OpenerTime, false);
 		break;
 	case EAttackPhase::Opener:
-		Phase = EAttackPhase::Attacking;
+		AttackPhase = EAttackPhase::Attacking;
 		SetDebugAttackCollision(false);
 		SetAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AttackTime, false);
 		break;
 	case EAttackPhase::Attacking:
-		Phase = EAttackPhase::AfterAttack;
+		AttackPhase = EAttackPhase::AfterAttack;
 		SetAttackCollision(false);
 		SetDebugAttackCollision(true);
 		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AfterAttackTime, false);
 		break;
 	case EAttackPhase::AfterAttack:
-		Phase = EAttackPhase::NotAttacking;
+		AttackPhase = EAttackPhase::NotAttacking;
 		SetDebugAttackCollision(false);
 		SetTickState(false);
 		AttackEndDelegate.Broadcast(true);
@@ -261,5 +287,15 @@ void ABase_NPC_SimpleChase::OnEndJump()
 void ABase_NPC_SimpleChase::PlayDeath()
 {
 	AttackTarget->OnEnemyDeath(this);
-	Destroy();
+	EnemyDeathDelegate.Broadcast();
+}
+
+class ABase_LevelController* ABase_NPC_SimpleChase::GetLevelController() const
+{
+	return LevelController;
+}
+
+class USphereComponent* ABase_NPC_SimpleChase::GetNoticeCollision() const
+{
+	return NoticeCollision;
 }

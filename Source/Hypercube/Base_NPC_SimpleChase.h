@@ -43,6 +43,16 @@ enum class EAttackPhase : uint8
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
 
+UENUM(BlueprintType)
+enum class EEnemyPhase : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Noticing UMETA(DisplayName = "Noticing"),
+	Chasing UMETA(DisplayName = "Chasing")
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDamaged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJumpEnd, bool, success);
 
@@ -77,6 +87,12 @@ public:
 	class ABase_LevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyDamaged EnemyDamagedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyDeath EnemyDeathDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
@@ -94,8 +110,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroRadius;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
+	float AggroTime;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebug;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
@@ -104,8 +126,11 @@ protected:
 
 	uint8 TickSemaphore;
 
+	FTimerHandle NoticeTimerHandle;
+	EEnemyPhase MovePhase;
+
 	FTimerHandle AttackTimerHandle;
-	EAttackPhase Phase;
+	EAttackPhase AttackPhase;
 	class AHypercubeCharacter* AttackTarget;
 
 	FTimerHandle DelayedInitTimerHandle;
@@ -144,6 +169,9 @@ public:
 	void OnNotice();
 
 	UFUNCTION(BlueprintCallable)
+	void AfterNotice();
+
+	UFUNCTION(BlueprintCallable)
 	void Attack();
 
 	UFUNCTION(BlueprintCallable)
@@ -151,4 +179,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	inline class ABase_LevelController* GetLevelController() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	class USphereComponent* GetNoticeCollision() const;
 };
