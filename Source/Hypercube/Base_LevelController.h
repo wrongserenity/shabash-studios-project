@@ -231,6 +231,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetTargetMusicParameter();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboard(int Num) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetDifficultyBrief() const;
 };
 
 template<typename T>
@@ -311,3 +317,5 @@ T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>
 	}
 	return Values.Last();
 }
+
+FString FloatToFString(float Val);

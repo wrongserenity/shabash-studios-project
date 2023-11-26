@@ -557,33 +557,6 @@ void AHypercubeCharacter::Pause()
 	PauseDelegate.Broadcast(bIsGamePaused);
 }
 
-FString AHypercubeCharacter::GetScoreboard(int Num) const
-{
-	TArray<float> Scores;
-	for (int i = 0; i < LevelController->LevelData.Num(); ++i)
-	{
-		if (LevelController->LevelData[i].Score > 0.0f)
-		{
-			Scores.Add(LevelController->LevelData[i].Score);
-		}
-	}
-	if (!Scores.Num())
-	{
-		return FString("");
-	}
-	Scores.Sort();
-	FString Result = "Scoreboard:\n\n";
-	Num = Num > Scores.Num() ? Scores.Num() : Num;
-	for (int i = 0; i < Num; ++i)
-	{
-		Result.AppendInt(i + 1);
-		Result += FString(". ");
-		Result.AppendInt(FMath::RoundToInt(Scores[Scores.Num() - 1 - i]));
-		Result.AppendChar('\n');
-	}
-	return Result;
-}
-
 ABase_LevelController* AHypercubeCharacter::GetLevelController() const
 {
 	return LevelController;

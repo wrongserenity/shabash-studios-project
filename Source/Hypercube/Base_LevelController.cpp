@@ -348,3 +348,61 @@ float ABase_LevelController::GetTargetMusicParameter()
 	}
 	return 1.0f;
 }
+
+FString ABase_LevelController::GetScoreboard(int Num) const
+{
+	TArray<float> Scores;
+	for (int i = 0; i < LevelData.Num(); ++i)
+	{
+		if (LevelData[i].Score > 0.0f)
+		{
+			Scores.Add(LevelData[i].Score);
+		}
+	}
+	if (!Scores.Num())
+	{
+		return FString("");
+	}
+	Scores.Sort();
+	FString Result = "Scoreboard:\n\n";
+	Num = Num > Scores.Num() ? Scores.Num() : Num;
+	for (int i = 0; i < Num; ++i)
+	{
+		Result.AppendInt(i + 1);
+		Result += FString(". ");
+		Result.AppendInt(FMath::RoundToInt(Scores[Scores.Num() - 1 - i]));
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetDifficultyBrief() const
+{
+	FString Result = "Difficulty parameter: " + FloatToFString(DifficultyParameter);
+	Result += FString("\n\n\nPlayer stats:\n\nSpeed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVelocityValues));
+	Result += FString("\nDamage stats growing speed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerDamageMultiplerValues));
+	Result += FString("\nVampirism: ");
+	Result.AppendInt(int(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVampirismValues) * 100.0f));
+	Result += FString("%\n\n\nEnemy stats:\n\nSpeed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyVelocityValues));
+	Result += FString("\nDamage: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyDamageValues));
+	Result += FString("\nNotice radius: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
+	Result += FString("\nEnemy Count: ");
+	Result.AppendInt(int(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyCountPercentageValues) * 100.0f));
+	Result.AppendChar('%');
+	return Result;
+}
+
+FString FloatToFString(float Val)
+{
+	FString Result("");
+	int WholePart = FMath::FloorToInt(Val);
+	int AfterPoint = FMath::FloorToInt((Val - FMath::FloorToFloat(Val)) * 100.0f);
+	Result.AppendInt(WholePart);
+	if (!AfterPoint)
+	{
+		return Result;
+	}
+	Result.AppendChar('.');
+	Result.AppendInt(AfterPoint);
+	return Result;
+}
