@@ -6,10 +6,12 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Math/UnrealMathUtility.h"
 #include "Components/SphereComponent.h"
+#include "Components/AudioComponent.h"
+#include "Components/SceneComponent.h"
 
 ABase_LevelController::ABase_LevelController()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
@@ -49,6 +51,19 @@ ABase_LevelController::ABase_LevelController()
 	EnemyNoticeRadiusValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f };
 	EnemyCountPercentageValues = { 0.3f, 0.3f, 0.7f, 0.7f, 1.0f, 1.0f, 1.0f };
 
+	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = Root;
+
+	MusicComp_Low = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Low"));
+	MusicComp_Low->SetupAttachment(RootComponent);
+
+	MusicComp_High = CreateDefaultSubobject<UAudioComponent>(TEXT("Music High"));
+	MusicComp_High->SetupAttachment(RootComponent);
+
+	MusicParameter = TargetMusicParameter = 0.0f;
+	MusicChangeSpeed = 2.0f;
+	MusicRefreshFrequency = 2.0f;
+	MusicRefreshTimer = 0.0f;
 }
 
 void ABase_LevelController::BeginPlay()
@@ -56,7 +71,31 @@ void ABase_LevelController::BeginPlay()
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
+	MusicComp_Low->SetVolumeMultiplier((MusicParameter < 0.5f ? MusicParameter * 2.0f : (1.0f - MusicParameter) * 2.0f) + 0.001f);
+	MusicComp_High->SetVolumeMultiplier((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f);
+	MusicComp_Low->Play();
+	MusicComp_High->Play();
 	Super::BeginPlay();
+}
+
+void ABase_LevelController::Tick(float DeltaSeconds)
+{
+	MusicRefreshTimer += DeltaSeconds;
+	if (MusicRefreshTimer >= MusicRefreshFrequency)
+	{
+		MusicRefreshTimer = 0.0f;
+		TargetMusicParameter = GetTargetMusicParameter();
+	}
+	if (MusicParameter != TargetMusicParameter)
+	{
+		MusicParameter = FMath::Lerp(MusicParameter, TargetMusicParameter, MusicChangeSpeed * DeltaSeconds);
+		if (FMath::IsNearlyEqual(MusicParameter, TargetMusicParameter, 0.001f))
+		{
+			MusicParameter = TargetMusicParameter;
+		}
+		MusicComp_Low->SetVolumeMultiplier((MusicParameter < 0.5f ? MusicParameter * 2.0f : (1.0f - MusicParameter) * 2.0f) + 0.001f);
+		MusicComp_High->SetVolumeMultiplier((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f);
+	}
 }
 
 void ABase_LevelController::LoadLevelData()
@@ -263,4 +302,18 @@ void ABase_LevelController::SetEnemyParams(class ABase_NPC_SimpleChase* Enemy)
 	Enemy->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyVelocityValues);
 	Enemy->SimpleAttack.Damage *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyDamageValues);
 	Enemy->GetNoticeCollision()->SetSphereRadius(Enemy->AggroRadius * GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
+}
+
+float ABase_LevelController::GetTargetMusicParameter()
+{
+	int ChasingCount = Player->GetEnemyChasingCount();
+	if (!ChasingCount)
+	{
+		return 0.0f;
+	}
+	if (ChasingCount < 10)
+	{
+		return 0.5f;
+	}
+	return 1.0f;
 }
