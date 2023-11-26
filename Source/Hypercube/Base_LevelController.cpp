@@ -16,10 +16,12 @@ ABase_LevelController::ABase_LevelController()
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
 	NoticeSoundTurnOffTime = 1.0f;
-
 	bEnemyCanNoticeSound = true;
 
-	NextLevelName = TEXT("level_1_upd");
+	FootstepSoundTurnOffTime = 0.2f;
+	bEnemyCanFootstepSound = true;
+
+	LevelNames = { TEXT("training"), TEXT("level_1_upd"), TEXT("level_2"), TEXT("level_3") };
 
 	SaveSlotName = "RunDataSaveSlot";
 	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };
@@ -231,7 +233,7 @@ void ABase_LevelController::SaveLevelData()
 
 void ABase_LevelController::LoadNewLevel()
 {
-	UGameplayStatics::OpenLevel(GetWorld(), NextLevelName);
+	UGameplayStatics::OpenLevel(GetWorld(), LevelNames[1]);
 }
 
 void ABase_LevelController::ClearLevelData()
@@ -248,6 +250,17 @@ void ABase_LevelController::SetNoticeSoundTurnOff()
 void ABase_LevelController::OnEndNoticeSoundTurnedOff()
 {
 	bEnemyCanNoticeSound = true;
+}
+
+void ABase_LevelController::SetFootstepSoundTurnOff()
+{
+	bEnemyCanFootstepSound = false;
+	GetWorld()->GetTimerManager().SetTimer(FootstepSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndFootstepSoundTurnedOff, FootstepSoundTurnOffTime, false);
+}
+
+void ABase_LevelController::OnEndFootstepSoundTurnedOff()
+{
+	bEnemyCanFootstepSound = true;
 }
 
 float ABase_LevelController::GetDifficultyParameter()

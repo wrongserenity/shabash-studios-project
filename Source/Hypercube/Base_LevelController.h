@@ -53,7 +53,13 @@ public:
 	bool bEnemyCanNoticeSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	FName NextLevelName;
+	float FootstepSoundTurnOffTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
+	bool bEnemyCanFootstepSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	TArray<FName> LevelNames;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
 	TArray<int> DeathCountBounds;
@@ -135,13 +141,18 @@ protected:
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
-	FTimerHandle NoticeSoundTurnOffTimerHandle;
 
 	float MusicRefreshTimer;
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
+
+	FTimerHandle NoticeSoundTurnOffTimerHandle;
+	void OnEndNoticeSoundTurnedOff();
+
+	FTimerHandle FootstepSoundTurnOffTimerHandle;
+	void OnEndFootstepSoundTurnedOff();
 
 public:	
 
@@ -194,7 +205,7 @@ public:
 	void SetNoticeSoundTurnOff();
 
 	UFUNCTION(BlueprintCallable)
-	void OnEndNoticeSoundTurnedOff();
+	void SetFootstepSoundTurnOff();
 
 	UFUNCTION(BlueprintCallable)
 	float GetDifficultyParameter();
