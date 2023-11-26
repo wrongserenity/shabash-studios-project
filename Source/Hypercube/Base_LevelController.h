@@ -15,6 +15,15 @@ class HYPERCUBE_API ABase_LevelController : public AActor
 {
 	GENERATED_BODY()
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class USceneComponent* Root;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UAudioComponent* MusicComp_Low;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UAudioComponent* MusicComp_High;
+
 public:	
 	// Sets default values for this actor's properties
 	ABase_LevelController();
@@ -100,6 +109,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies")
 	TArray<float> EnemyCountPercentageValues;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Music")
+	float MusicParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	float MusicChangeSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	float TargetMusicParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	float MusicRefreshFrequency;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	float MusicVolumeMultiplier;
+
 protected:
 
 	class AHypercubeCharacter* Player;
@@ -113,7 +137,10 @@ protected:
 	FTimerHandle AfterLevelTimerHandle;
 	FTimerHandle NoticeSoundTurnOffTimerHandle;
 
+	float MusicRefreshTimer;
+
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 public:	
@@ -180,6 +207,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetEnemyParams(class ABase_NPC_SimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	float GetTargetMusicParameter();
 };
 
 template<typename T>
