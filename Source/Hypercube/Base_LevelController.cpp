@@ -17,7 +17,7 @@ ABase_LevelController::ABase_LevelController()
 
 	bEnemyCanNoticeSound = true;
 
-	NextLevelName = TEXT("level1");
+	NextLevelName = TEXT("level_1_upd");
 
 	SaveSlotName = "RunDataSaveSlot";
 	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };

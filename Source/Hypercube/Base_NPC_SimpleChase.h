@@ -181,7 +181,7 @@ public:
 	void PlayDeath();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	inline class ABase_LevelController* GetLevelController() const;
+	class ABase_LevelController* GetLevelController() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	class USphereComponent* GetNoticeCollision() const;
