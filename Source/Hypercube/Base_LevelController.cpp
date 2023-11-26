@@ -21,7 +21,10 @@ ABase_LevelController::ABase_LevelController()
 	FootstepSoundTurnOffTime = 0.2f;
 	bEnemyCanFootstepSound = true;
 
-	LevelNames = { TEXT("training"), TEXT("level_1_upd"), TEXT("level_2"), TEXT("level_3") };
+	DeathSoundTurnOffTime = 1.0f;
+	bEnemyCanDeathSound = true;
+
+	LevelNames = { "training", "level_1_upd", "level_2", "level_3" };
 
 	SaveSlotName = "RunDataSaveSlot";
 	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };
@@ -71,6 +74,12 @@ ABase_LevelController::ABase_LevelController()
 
 void ABase_LevelController::BeginPlay()
 {
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *(GetWorld()->GetMapName()));
+	CurLevelIndex = GetCurMapIndex();
+	if (CurLevelIndex < 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid map!"));
+	}
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
@@ -99,6 +108,20 @@ void ABase_LevelController::Tick(float DeltaSeconds)
 		MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
+}
+
+int ABase_LevelController::GetCurMapIndex() const
+{
+	const FString CurMapName = GetWorld()->GetMapName();
+	const FString Prefix = "UEDPIE_0_";
+	for (int i = 0; i < LevelNames.Num(); ++i)
+	{
+		if (CurMapName == Prefix + LevelNames[i])
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 void ABase_LevelController::LoadLevelData()
@@ -198,7 +221,7 @@ void ABase_LevelController::OnPlayerDeath()
 
 void ABase_LevelController::AfterPlayerDeath()
 {
-	LoadNewLevel();
+	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[CurLevelIndex < 0 ? 0 : CurLevelIndex]));
 }
 
 void ABase_LevelController::OnAllEnemiesDead()
@@ -211,7 +234,7 @@ void ABase_LevelController::OnAllEnemiesDead()
 
 void ABase_LevelController::AfterAllEnemiesDead()
 {
-	LoadNewLevel();
+	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[(CurLevelIndex + 1) % LevelNames.Num()]));
 }
 
 void ABase_LevelController::SaveLevelData()
@@ -229,11 +252,6 @@ void ABase_LevelController::SaveLevelData()
 		SaveGameInstance->LevelDataArr = LevelData;
 		UGameplayStatics::SaveGameToSlot(SaveGameInstance, SaveSlotName, 0);
 	}
-}
-
-void ABase_LevelController::LoadNewLevel()
-{
-	UGameplayStatics::OpenLevel(GetWorld(), LevelNames[1]);
 }
 
 void ABase_LevelController::ClearLevelData()
@@ -261,6 +279,17 @@ void ABase_LevelController::SetFootstepSoundTurnOff()
 void ABase_LevelController::OnEndFootstepSoundTurnedOff()
 {
 	bEnemyCanFootstepSound = true;
+}
+
+void ABase_LevelController::SetDeathSoundTurnOff()
+{
+	bEnemyCanDeathSound = false;
+	GetWorld()->GetTimerManager().SetTimer(DeathSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndDeathSoundTurnedOff, DeathSoundTurnOffTime, false);
+}
+
+void ABase_LevelController::OnEndDeathSoundTurnedOff()
+{
+	bEnemyCanDeathSound = true;
 }
 
 float ABase_LevelController::GetDifficultyParameter()

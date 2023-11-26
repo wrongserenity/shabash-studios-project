@@ -59,7 +59,13 @@ public:
 	bool bEnemyCanFootstepSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	TArray<FName> LevelNames;
+	float DeathSoundTurnOffTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
+	bool bEnemyCanDeathSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	TArray<FString> LevelNames;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
 	TArray<int> DeathCountBounds;
@@ -132,6 +138,8 @@ public:
 
 protected:
 
+	int CurLevelIndex;
+
 	class AHypercubeCharacter* Player;
 	
 	TArray<class AActor*> SpawnPoints;
@@ -148,11 +156,16 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
+	int GetCurMapIndex() const;
+
 	FTimerHandle NoticeSoundTurnOffTimerHandle;
 	void OnEndNoticeSoundTurnedOff();
 
 	FTimerHandle FootstepSoundTurnOffTimerHandle;
 	void OnEndFootstepSoundTurnedOff();
+
+	FTimerHandle DeathSoundTurnOffTimerHandle;
+	void OnEndDeathSoundTurnedOff();
 
 public:	
 
@@ -196,9 +209,6 @@ public:
 	void SaveLevelData();
 
 	UFUNCTION(BlueprintCallable)
-	void LoadNewLevel();
-
-	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
 
 	UFUNCTION(BlueprintCallable)
@@ -206,6 +216,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetFootstepSoundTurnOff();
+
+	UFUNCTION(BlueprintCallable)
+	void SetDeathSoundTurnOff();
 
 	UFUNCTION(BlueprintCallable)
 	float GetDifficultyParameter();

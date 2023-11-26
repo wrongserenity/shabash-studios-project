@@ -428,7 +428,10 @@ void AHypercubeCharacter::Attack()
 
 void AHypercubeCharacter::OnEndAttack()
 {
-	MovementPhase = EPlayerMovementPhase::Walking;
+	if (MovementPhase != EPlayerMovementPhase::None)
+	{
+		MovementPhase = EPlayerMovementPhase::Walking;
+	}
 }
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
