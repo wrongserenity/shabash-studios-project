@@ -79,6 +79,12 @@ class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* Debug_DamageIndicator;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UWidgetComponent* SlowDebuffEffectWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UWidgetComponent* DamageDebuffEffectWidget;
+
 public:
 
 	ABase_NPC_SimpleChase();
@@ -154,6 +160,14 @@ protected:
 	FTimerHandle JumpTimerHandle;
 	void OnEndJump();
 
+	FTimerHandle SlowDebuffTimerHandle;
+	float BaseSpeed;
+	void OnEndSlowDebuff();
+
+	FTimerHandle DamageDebuffTimerHandle;
+	float BaseDamage;
+	void OnEndDamageDebuff();
+
 public:	
 
 	UFUNCTION(BlueprintCallable)
@@ -185,4 +199,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	class USphereComponent* GetNoticeCollision() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetSlowDebuff(float Mult, float Time);
+
+	UFUNCTION(BlueprintCallable)
+	void SetDamageDebuff(float Mult, float Time);
 };

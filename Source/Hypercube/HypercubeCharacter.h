@@ -91,6 +91,9 @@ class AHypercubeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class APlayerController* PlayerController;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UWidgetComponent* SpeedBuffEffectWidget;
+
 public:
 	AHypercubeCharacter();
 
@@ -177,6 +180,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	float DamageFXAlpha;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float CameraFovChangeSpeed;
+
 protected:
 
 	class UCharacterMovementComponent* MoveComp;
@@ -184,8 +190,6 @@ protected:
 
 	EPlayerMovementPhase MovementPhase;
 	EPlayerAttackPhase AttackPhase;
-
-	uint8 TickSemaphore;
 
 	bool bCanDash;
 	bool bDashMovementBlocked;
@@ -210,6 +214,12 @@ protected:
 	float DamageFXTimer;
 
 	FTimerHandle Debug_DamageIndicatorTimerHandle;
+
+	float BaseSpeed;
+	float BaseJumpVelocity;
+	float BaseCameraFov;
+	float TargetCameraFov;
+	FTimerHandle SpeedBuffTimerHandle;
 
 protected:
 
@@ -283,5 +293,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	int GetEnemyChasingCount() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetSpeedBuff(float SpeedMult, float JumpMult, float Time);
+
+	void OnEndSpeedBuff();
 };
 

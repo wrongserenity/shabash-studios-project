@@ -15,6 +15,7 @@
 #include "Base_LevelController.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
+#include "Components/WidgetComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -22,8 +23,6 @@
 AHypercubeCharacter::AHypercubeCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	TickSemaphore = 0;
-	SetActorTickEnabled(false);
 
 	Capsule = GetCapsuleComponent();
 	Capsule->InitCapsuleSize(42.0f, 96.0f);
@@ -118,6 +117,14 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DamageFXTimer = 0.0f;
 
 	bDebug = false;
+
+	TargetCameraFov = FollowCamera->FieldOfView;
+	CameraFovChangeSpeed = 10.0f;
+
+	SpeedBuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Speed Buff Effect"));
+	SpeedBuffEffectWidget->SetupAttachment(RootComponent);
+	SpeedBuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	SpeedBuffEffectWidget->SetVisibility(false);
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -203,6 +210,14 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 		if (DamageFXTimer <= 0.0f)
 		{
 			DamageFXAlpha = 0.0f;
+		}
+	}
+	if (FollowCamera->FieldOfView != TargetCameraFov)
+	{
+		FollowCamera->FieldOfView = FMath::Lerp(FollowCamera->FieldOfView, TargetCameraFov, CameraFovChangeSpeed * DeltaSeconds);
+		if (FMath::IsNearlyEqual(FollowCamera->FieldOfView, TargetCameraFov, 0.001f))
+		{
+			FollowCamera->FieldOfView = TargetCameraFov;
 		}
 	}
 	Super::Tick(DeltaSeconds);
@@ -574,4 +589,33 @@ ABase_LevelController* AHypercubeCharacter::GetLevelController() const
 int AHypercubeCharacter::GetEnemyChasingCount() const
 {
 	return EnemyChasing.Num();
+}
+
+void AHypercubeCharacter::SetSpeedBuff(float SpeedMult, float JumpMult, float Time)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(SpeedBuffTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(SpeedBuffTimerHandle);
+	}
+	else
+	{
+		BaseSpeed = MoveComp->MaxWalkSpeed;
+		BaseJumpVelocity = MoveComp->JumpZVelocity;
+		BaseCameraFov = TargetCameraFov;
+
+		MoveComp->MaxWalkSpeed *= SpeedMult;
+		MoveComp->JumpZVelocity *= JumpMult;
+		TargetCameraFov *= 1.3f;
+
+		SpeedBuffEffectWidget->SetVisibility(true);
+	}
+	GetWorld()->GetTimerManager().SetTimer(SpeedBuffTimerHandle, this, &AHypercubeCharacter::OnEndSpeedBuff, Time, false);
+}
+
+void AHypercubeCharacter::OnEndSpeedBuff()
+{
+	MoveComp->MaxWalkSpeed = BaseSpeed;
+	MoveComp->JumpZVelocity = BaseJumpVelocity;
+	TargetCameraFov = BaseCameraFov;
+	SpeedBuffEffectWidget->SetVisibility(false);
 }
