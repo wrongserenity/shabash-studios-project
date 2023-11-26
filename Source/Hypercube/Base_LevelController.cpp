@@ -63,6 +63,7 @@ ABase_LevelController::ABase_LevelController()
 	MusicParameter = TargetMusicParameter = 0.0f;
 	MusicChangeSpeed = 2.0f;
 	MusicRefreshFrequency = 2.0f;
+	MusicVolumeMultiplier = 0.25f;
 	MusicRefreshTimer = 0.0f;
 }
 
@@ -71,8 +72,8 @@ void ABase_LevelController::BeginPlay()
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
-	MusicComp_Low->SetVolumeMultiplier((MusicParameter < 0.5f ? MusicParameter * 2.0f : (1.0f - MusicParameter) * 2.0f) + 0.001f);
-	MusicComp_High->SetVolumeMultiplier((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f);
+	MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : (1.0f - MusicParameter) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+	MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicComp_Low->Play();
 	MusicComp_High->Play();
 	Super::BeginPlay();
@@ -93,8 +94,8 @@ void ABase_LevelController::Tick(float DeltaSeconds)
 		{
 			MusicParameter = TargetMusicParameter;
 		}
-		MusicComp_Low->SetVolumeMultiplier((MusicParameter < 0.5f ? MusicParameter * 2.0f : (1.0f - MusicParameter) * 2.0f) + 0.001f);
-		MusicComp_High->SetVolumeMultiplier((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f);
+		MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : (1.0f - MusicParameter) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+		MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
 }
 

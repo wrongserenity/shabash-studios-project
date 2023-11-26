@@ -121,6 +121,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
 	float MusicRefreshFrequency;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	float MusicVolumeMultiplier;
+
 protected:
 
 	class AHypercubeCharacter* Player;
