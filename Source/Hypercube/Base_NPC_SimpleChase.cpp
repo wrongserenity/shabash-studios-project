@@ -80,6 +80,12 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	SlowDebuffEffectWidget->SetupAttachment(RootComponent);
 	SlowDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
 	SlowDebuffEffectWidget->SetVisibility(false);
+
+	
+	DamageDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Damage Debuff Effect"));
+	DamageDebuffEffectWidget->SetupAttachment(RootComponent);
+	DamageDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	DamageDebuffEffectWidget->SetVisibility(false);
 }
 
 // Called when the game starts or when spawned
@@ -328,4 +334,27 @@ void ABase_NPC_SimpleChase::OnEndSlowDebuff()
 {
 	MoveComp->MaxWalkSpeed = BaseSpeed;
 	SlowDebuffEffectWidget->SetVisibility(false);
+}
+
+void ABase_NPC_SimpleChase::SetDamageDebuff(float Mult, float Time)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(DamageDebuffTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(DamageDebuffTimerHandle);
+	}
+	else
+	{
+		BaseDamage = SimpleAttack.Damage;
+
+		SimpleAttack.Damage *= Mult;
+
+		DamageDebuffEffectWidget->SetVisibility(true);
+	}
+	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndSlowDebuff, Time, false);
+}
+
+void ABase_NPC_SimpleChase::OnEndDamageDebuff()
+{
+	SimpleAttack.Damage = BaseDamage;
+	DamageDebuffEffectWidget->SetVisibility(false);
 }
