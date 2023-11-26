@@ -190,9 +190,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	float GetPlayerHealthValue() const;
-
 	UFUNCTION(BlueprintCallable)
 	void SetNoticeSoundTurnOff();
 

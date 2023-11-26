@@ -184,7 +184,6 @@ void ABase_LevelController::UpdateMaxMultiplicator(float NewMultiplicator)
 void ABase_LevelController::SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter)
 {
 	Player = PlayerCharacter;
-	Player->Health = Player->MaxHealth = GetPlayerHealthValue();
 	SetPlayerParams();
 }
 
@@ -238,17 +237,6 @@ void ABase_LevelController::LoadNewLevel()
 void ABase_LevelController::ClearLevelData()
 {
 	LevelData.Empty();
-}
-
-float ABase_LevelController::GetPlayerHealthValue() const
-{
-	if (!LevelData.Num())
-	{
-		return 150.0f;
-	}
-	float NewHealth = 150.0f - LevelData.Last().Score / 16.0f;
-	NewHealth = NewHealth < 40.0f ? 40.0f : NewHealth;
-	return NewHealth;
 }
 
 void ABase_LevelController::SetNoticeSoundTurnOff()
