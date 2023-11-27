@@ -11,6 +11,7 @@
 #include "HypercubeCharacter.h"
 #include "Components/SphereComponent.h"
 #include "Base_LevelController.h"
+#include "Components/WidgetComponent.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -74,6 +75,17 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	Debug_DamageIndicatorTime = 3.0f;
 
 	bDebug = false;
+
+	SlowDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Slow Debuff Effect"));
+	SlowDebuffEffectWidget->SetupAttachment(RootComponent);
+	SlowDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	SlowDebuffEffectWidget->SetVisibility(false);
+
+	
+	DamageDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Damage Debuff Effect"));
+	DamageDebuffEffectWidget->SetupAttachment(RootComponent);
+	DamageDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	DamageDebuffEffectWidget->SetVisibility(false);
 }
 
 // Called when the game starts or when spawned
@@ -237,6 +249,7 @@ void ABase_NPC_SimpleChase::Attack()
 	switch (AttackPhase)
 	{
 	case EAttackPhase::NotAttacking:
+		UE_LOG(LogTemp, Warning, TEXT("Enemy Attacks!"));
 		AttackPhase = EAttackPhase::Opener;
 		SetTickState(true);
 		SetDebugAttackCollision(true);
@@ -298,4 +311,50 @@ class ABase_LevelController* ABase_NPC_SimpleChase::GetLevelController() const
 class USphereComponent* ABase_NPC_SimpleChase::GetNoticeCollision() const
 {
 	return NoticeCollision;
+}
+
+void ABase_NPC_SimpleChase::SetSlowDebuff(float Mult, float Time)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(SlowDebuffTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(SlowDebuffTimerHandle);
+	}
+	else
+	{
+		BaseSpeed = MoveComp->MaxWalkSpeed;
+
+		MoveComp->MaxWalkSpeed *= Mult;
+
+		SlowDebuffEffectWidget->SetVisibility(true);
+	}
+	GetWorld()->GetTimerManager().SetTimer(SlowDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndSlowDebuff, Time, false);
+}
+
+void ABase_NPC_SimpleChase::OnEndSlowDebuff()
+{
+	MoveComp->MaxWalkSpeed = BaseSpeed;
+	SlowDebuffEffectWidget->SetVisibility(false);
+}
+
+void ABase_NPC_SimpleChase::SetDamageDebuff(float Mult, float Time)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(DamageDebuffTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(DamageDebuffTimerHandle);
+	}
+	else
+	{
+		BaseDamage = SimpleAttack.Damage;
+
+		SimpleAttack.Damage *= Mult;
+
+		DamageDebuffEffectWidget->SetVisibility(true);
+	}
+	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndSlowDebuff, Time, false);
+}
+
+void ABase_NPC_SimpleChase::OnEndDamageDebuff()
+{
+	SimpleAttack.Damage = BaseDamage;
+	DamageDebuffEffectWidget->SetVisibility(false);
 }
