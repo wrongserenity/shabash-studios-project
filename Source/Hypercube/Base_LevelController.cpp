@@ -16,10 +16,15 @@ ABase_LevelController::ABase_LevelController()
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
 
 	NoticeSoundTurnOffTime = 1.0f;
-
 	bEnemyCanNoticeSound = true;
 
-	NextLevelName = TEXT("level_1_upd");
+	FootstepSoundTurnOffTime = 0.2f;
+	bEnemyCanFootstepSound = true;
+
+	DeathSoundTurnOffTime = 1.0f;
+	bEnemyCanDeathSound = true;
+
+	LevelNames = { "training", "level_1_upd", "level_2", "level_3" };
 
 	SaveSlotName = "RunDataSaveSlot";
 	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };
@@ -69,6 +74,12 @@ ABase_LevelController::ABase_LevelController()
 
 void ABase_LevelController::BeginPlay()
 {
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *(GetWorld()->GetMapName()));
+	CurLevelIndex = GetCurMapIndex();
+	if (CurLevelIndex < 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid map!"));
+	}
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
@@ -97,6 +108,20 @@ void ABase_LevelController::Tick(float DeltaSeconds)
 		MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
+}
+
+int ABase_LevelController::GetCurMapIndex() const
+{
+	const FString CurMapName = GetWorld()->GetMapName();
+	const FString Prefix = "UEDPIE_0_";
+	for (int i = 0; i < LevelNames.Num(); ++i)
+	{
+		if (CurMapName == Prefix + LevelNames[i])
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 void ABase_LevelController::LoadLevelData()
@@ -196,7 +221,7 @@ void ABase_LevelController::OnPlayerDeath()
 
 void ABase_LevelController::AfterPlayerDeath()
 {
-	LoadNewLevel();
+	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[CurLevelIndex < 0 ? 0 : CurLevelIndex]));
 }
 
 void ABase_LevelController::OnAllEnemiesDead()
@@ -209,7 +234,7 @@ void ABase_LevelController::OnAllEnemiesDead()
 
 void ABase_LevelController::AfterAllEnemiesDead()
 {
-	LoadNewLevel();
+	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[(CurLevelIndex + 1) % LevelNames.Num()]));
 }
 
 void ABase_LevelController::SaveLevelData()
@@ -229,11 +254,6 @@ void ABase_LevelController::SaveLevelData()
 	}
 }
 
-void ABase_LevelController::LoadNewLevel()
-{
-	UGameplayStatics::OpenLevel(GetWorld(), NextLevelName);
-}
-
 void ABase_LevelController::ClearLevelData()
 {
 	LevelData.Empty();
@@ -248,6 +268,28 @@ void ABase_LevelController::SetNoticeSoundTurnOff()
 void ABase_LevelController::OnEndNoticeSoundTurnedOff()
 {
 	bEnemyCanNoticeSound = true;
+}
+
+void ABase_LevelController::SetFootstepSoundTurnOff()
+{
+	bEnemyCanFootstepSound = false;
+	GetWorld()->GetTimerManager().SetTimer(FootstepSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndFootstepSoundTurnedOff, FootstepSoundTurnOffTime, false);
+}
+
+void ABase_LevelController::OnEndFootstepSoundTurnedOff()
+{
+	bEnemyCanFootstepSound = true;
+}
+
+void ABase_LevelController::SetDeathSoundTurnOff()
+{
+	bEnemyCanDeathSound = false;
+	GetWorld()->GetTimerManager().SetTimer(DeathSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndDeathSoundTurnedOff, DeathSoundTurnOffTime, false);
+}
+
+void ABase_LevelController::OnEndDeathSoundTurnedOff()
+{
+	bEnemyCanDeathSound = true;
 }
 
 float ABase_LevelController::GetDifficultyParameter()
@@ -305,4 +347,62 @@ float ABase_LevelController::GetTargetMusicParameter()
 		return 0.5f;
 	}
 	return 1.0f;
+}
+
+FString ABase_LevelController::GetScoreboard(int Num) const
+{
+	TArray<float> Scores;
+	for (int i = 0; i < LevelData.Num(); ++i)
+	{
+		if (LevelData[i].Score > 0.0f)
+		{
+			Scores.Add(LevelData[i].Score);
+		}
+	}
+	if (!Scores.Num())
+	{
+		return FString("");
+	}
+	Scores.Sort();
+	FString Result = "Scoreboard:\n\n";
+	Num = Num > Scores.Num() ? Scores.Num() : Num;
+	for (int i = 0; i < Num; ++i)
+	{
+		Result.AppendInt(i + 1);
+		Result += FString(". ");
+		Result.AppendInt(FMath::RoundToInt(Scores[Scores.Num() - 1 - i]));
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetDifficultyBrief() const
+{
+	FString Result = "Difficulty parameter: " + FloatToFString(DifficultyParameter);
+	Result += FString("\n\n\nPlayer stats:\n\nSpeed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVelocityValues));
+	Result += FString("\nDamage stats growing speed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerDamageMultiplerValues));
+	Result += FString("\nVampirism: ");
+	Result.AppendInt(int(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVampirismValues) * 100.0f));
+	Result += FString("%\n\n\nEnemy stats:\n\nSpeed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyVelocityValues));
+	Result += FString("\nDamage: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyDamageValues));
+	Result += FString("\nNotice radius: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
+	Result += FString("\nEnemy Count: ");
+	Result.AppendInt(int(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyCountPercentageValues) * 100.0f));
+	Result.AppendChar('%');
+	return Result;
+}
+
+FString FloatToFString(float Val)
+{
+	FString Result("");
+	int WholePart = FMath::FloorToInt(Val);
+	int AfterPoint = FMath::FloorToInt((Val - FMath::FloorToFloat(Val)) * 100.0f);
+	Result.AppendInt(WholePart);
+	if (!AfterPoint)
+	{
+		return Result;
+	}
+	Result.AppendChar('.');
+	Result.AppendInt(AfterPoint);
+	return Result;
 }

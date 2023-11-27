@@ -283,9 +283,6 @@ public:
 	void Pause();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FString GetScoreboard(int Num) const;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
 	class ABase_LevelController* GetLevelController() const;
 
 	UFUNCTION(BlueprintCallable)

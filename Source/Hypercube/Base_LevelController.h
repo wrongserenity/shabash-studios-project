@@ -53,7 +53,19 @@ public:
 	bool bEnemyCanNoticeSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	FName NextLevelName;
+	float FootstepSoundTurnOffTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
+	bool bEnemyCanFootstepSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	float DeathSoundTurnOffTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
+	bool bEnemyCanDeathSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	TArray<FString> LevelNames;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
 	TArray<int> DeathCountBounds;
@@ -126,6 +138,8 @@ public:
 
 protected:
 
+	int CurLevelIndex;
+
 	class AHypercubeCharacter* Player;
 	
 	TArray<class AActor*> SpawnPoints;
@@ -135,13 +149,23 @@ protected:
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
-	FTimerHandle NoticeSoundTurnOffTimerHandle;
 
 	float MusicRefreshTimer;
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
+
+	int GetCurMapIndex() const;
+
+	FTimerHandle NoticeSoundTurnOffTimerHandle;
+	void OnEndNoticeSoundTurnedOff();
+
+	FTimerHandle FootstepSoundTurnOffTimerHandle;
+	void OnEndFootstepSoundTurnedOff();
+
+	FTimerHandle DeathSoundTurnOffTimerHandle;
+	void OnEndDeathSoundTurnedOff();
 
 public:	
 
@@ -185,16 +209,16 @@ public:
 	void SaveLevelData();
 
 	UFUNCTION(BlueprintCallable)
-	void LoadNewLevel();
-
-	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
 
 	UFUNCTION(BlueprintCallable)
 	void SetNoticeSoundTurnOff();
 
 	UFUNCTION(BlueprintCallable)
-	void OnEndNoticeSoundTurnedOff();
+	void SetFootstepSoundTurnOff();
+
+	UFUNCTION(BlueprintCallable)
+	void SetDeathSoundTurnOff();
 
 	UFUNCTION(BlueprintCallable)
 	float GetDifficultyParameter();
@@ -207,6 +231,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetTargetMusicParameter();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboard(int Num) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetDifficultyBrief() const;
 };
 
 template<typename T>
@@ -287,3 +317,5 @@ T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>
 	}
 	return Values.Last();
 }
+
+FString FloatToFString(float Val);
