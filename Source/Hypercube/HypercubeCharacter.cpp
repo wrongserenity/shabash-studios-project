@@ -539,14 +539,12 @@ void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 	}
 }
 
-void AHypercubeCharacter::Pause()
+void AHypercubeCharacter::SetMouseCursorShow(bool Activate)
 {
-	bIsGamePaused = !bIsGamePaused;
-	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
-	PlayerController->bShowMouseCursor = bIsGamePaused;
-	PlayerController->bEnableClickEvents = bIsGamePaused;
-	PlayerController->bEnableMouseOverEvents = bIsGamePaused;
-	if (bIsGamePaused)
+	PlayerController->bShowMouseCursor = Activate;
+	PlayerController->bEnableClickEvents = Activate;
+	PlayerController->bEnableMouseOverEvents = Activate;
+	if (Activate)
 	{
 		PlayerController->SetInputMode(FInputModeGameAndUI());
 	}
@@ -554,6 +552,13 @@ void AHypercubeCharacter::Pause()
 	{
 		PlayerController->SetInputMode(FInputModeGameOnly());
 	}
+}
+
+void AHypercubeCharacter::Pause()
+{
+	bIsGamePaused = !bIsGamePaused;
+	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
+	SetMouseCursorShow(bIsGamePaused);
 	PauseDelegate.Broadcast(bIsGamePaused);
 }
 

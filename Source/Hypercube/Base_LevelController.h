@@ -8,6 +8,23 @@
 #include "Containers/SortedMap.h"
 #include "Base_LevelController.generated.h"
 
+USTRUCT(BlueprintType)
+struct FScoreboardData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Score;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DifficultyParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int LevelIndex;
+
+	bool operator<(const FScoreboardData& Other) const;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
 
 UCLASS()
@@ -44,9 +61,6 @@ public:
 	float AfterPlayerDeathTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	float AfterAllEnemiesDeadTime;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float NoticeSoundTurnOffTime;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
@@ -66,6 +80,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	TArray<FString> LevelNames;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	TArray<FString> LevelNamesToShow;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
 	TArray<int> DeathCountBounds;
@@ -203,13 +220,16 @@ public:
 	void OnAllEnemiesDead();
 
 	UFUNCTION(BlueprintCallable)
-	void AfterAllEnemiesDead();
-
-	UFUNCTION(BlueprintCallable)
 	void SaveLevelData();
 
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
+
+	UFUNCTION(BlueprintCallable)
+	void ReloadCurrentLevel();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadNextLevel();
 
 	UFUNCTION(BlueprintCallable)
 	void SetNoticeSoundTurnOff();
