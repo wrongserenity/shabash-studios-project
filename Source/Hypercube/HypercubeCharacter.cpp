@@ -1,7 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "HypercubeCharacter.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -15,6 +14,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Base_LevelController.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
+#include "Components/WidgetComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AHypercubeCharacter
@@ -22,8 +23,6 @@
 AHypercubeCharacter::AHypercubeCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	TickSemaphore = 0;
-	SetActorTickEnabled(false);
 
 	Capsule = GetCapsuleComponent();
 	Capsule->InitCapsuleSize(42.0f, 96.0f);
@@ -57,12 +56,13 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	MovementPhase = EPlayerMovementPhase::Walking;
 	AttackPhase = EPlayerAttackPhase::None;
-
+	
 	bCanDash = true;
 	bDashMovementBlocked = true;
 
 	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
+	Vampirism = 0.0f;
 	bIsInvincible = false;
 
 	DashDistance = 700.0f;
@@ -75,9 +75,13 @@ AHypercubeCharacter::AHypercubeCharacter()
 
 	DamageMultiplierEnemyCost = 0.5f;
 	EnemyChasing.Empty();
-	DamageMulptiplier = 1.0f;
+	DamageMultiplier = TargetDamageMultiplier = 1.0f;
+	DamageMultiplierStaysTime = 5.0f;
+	DamageMultiplierDecreaseSpeed = 1.0f;
+	bDamageMultiplierStays = false;
+	bDamageMultiplierFalling = false;
 
-	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 70.0f, 60.0f };
+	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 90.0f, 68.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
@@ -105,6 +109,22 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Debug_DamageIndicatorTime = 3.0f;
 
 	//DelayedInitTime = 0.2f;
+
+	bIsGamePaused = false;
+
+	DamageFXAlpha = 0.0f;
+	DamageFXTime = 0.5f;
+	DamageFXTimer = 0.0f;
+
+	bDebug = false;
+
+	TargetCameraFov = FollowCamera->FieldOfView;
+	CameraFovChangeSpeed = 10.0f;
+
+	SpeedBuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Speed Buff Effect"));
+	SpeedBuffEffectWidget->SetupAttachment(RootComponent);
+	SpeedBuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	SpeedBuffEffectWidget->SetVisibility(false);
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -120,6 +140,7 @@ void AHypercubeCharacter::BeginPlay()
 	{
 		LevelController = nullptr;
 	}
+	PlayerController = GetWorld()->GetFirstPlayerController();
 	Super::BeginPlay();
 	//GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &AHypercubeCharacter::DelayedInit, DelayedInitTime, false);
 }
@@ -151,6 +172,8 @@ void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AHypercubeCharacter::ReceiveAttackInput);
 
+	PlayerInputComponent->BindAction("Pause", IE_Pressed, this, &AHypercubeCharacter::Pause).bExecuteWhenPaused = true;
+
 	PlayerInputComponent->BindAxis("MoveForward", this, &AHypercubeCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AHypercubeCharacter::MoveRight);
 
@@ -170,6 +193,32 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 	if (AttackPhase == EPlayerAttackPhase::Attacking)
 	{
 		AttackTick();
+	}
+	if (bDamageMultiplierFalling && DamageMultiplier > TargetDamageMultiplier)
+	{
+		DamageMultiplier -= DamageMultiplierDecreaseSpeed * DeltaSeconds;
+		if (DamageMultiplier < TargetDamageMultiplier)
+		{
+			DamageMultiplier = TargetDamageMultiplier;
+			bDamageMultiplierFalling = false;
+		}
+	}
+	if (DamageFXTimer > 0.0f)
+	{
+		DamageFXAlpha = DamageFXCurve(1.0f - DamageFXTimer / DamageFXTime);
+		DamageFXTimer -= DeltaSeconds;
+		if (DamageFXTimer <= 0.0f)
+		{
+			DamageFXAlpha = 0.0f;
+		}
+	}
+	if (FollowCamera->FieldOfView != TargetCameraFov)
+	{
+		FollowCamera->FieldOfView = FMath::Lerp(FollowCamera->FieldOfView, TargetCameraFov, CameraFovChangeSpeed * DeltaSeconds);
+		if (FMath::IsNearlyEqual(FollowCamera->FieldOfView, TargetCameraFov, 0.001f))
+		{
+			FollowCamera->FieldOfView = TargetCameraFov;
+		}
 	}
 	Super::Tick(DeltaSeconds);
 }
@@ -198,7 +247,7 @@ void AHypercubeCharacter::AttackTick()
 		if (tmp && !AttackEnemiesCollided.Contains(tmp))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
-			tmp->TakeDamage(SimpleAttack.Damage * DamageMulptiplier);
+			tmp->TakeDamage(SimpleAttack.Damage * DamageMultiplier);
 			AttackEnemiesCollided.Add(tmp);
 		}
 	}
@@ -240,6 +289,23 @@ float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x)
 	//return 1.0;
 }
 
+inline float AHypercubeCharacter::DamageFXCurve(float x)
+{
+	if (x >= 0.0f && x <= 1.0f)
+	{
+		if (x < 0.2f)
+		{
+			return 2.5f * x;
+		}
+		if (x < 0.5f)
+		{
+			return 0.5f;
+		}
+		return 1.0f - x;
+	}
+	return 0.0f;
+}
+
 void AHypercubeCharacter::Dash()
 {
 	if (!bCanDash || MovementPhase != EPlayerMovementPhase::Walking)
@@ -247,6 +313,7 @@ void AHypercubeCharacter::Dash()
 		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
 	}
+	PlayerActionDelegate.Broadcast(EPlayerAction::Dash);
 	FVector Forward = FollowCamera->GetForwardVector();
 	Forward.Z = 0.0f;
 	Forward.Normalize();
@@ -303,14 +370,20 @@ void AHypercubeCharacter::OnEndDashCooldown()
 
 void AHypercubeCharacter::SetAttackCollision(bool Activate)
 {
-	AttackCollision->SetVisibility(Activate);
+	if (bDebug)
+	{
+		AttackCollision->SetVisibility(Activate);
+	}
 	AttackCollision->SetActive(Activate);
 }
 
 void AHypercubeCharacter::SetDebugAttackCollision(bool Activate)
 {
-	Debug_AttackCollision->SetVisibility(Activate);
-	Debug_AttackCollision->SetActive(Activate);
+	if (bDebug)
+	{
+		Debug_AttackCollision->SetVisibility(Activate);
+		Debug_AttackCollision->SetActive(Activate);
+	}
 }
 
 void AHypercubeCharacter::ReceiveAttackInput()
@@ -320,6 +393,7 @@ void AHypercubeCharacter::ReceiveAttackInput()
 		return;
 	}
 	MovementPhase = EPlayerMovementPhase::Attacking;
+	PlayerActionDelegate.Broadcast(EPlayerAction::Attack);
 	Attack();
 }
 
@@ -354,7 +428,10 @@ void AHypercubeCharacter::Attack()
 
 void AHypercubeCharacter::OnEndAttack()
 {
-	MovementPhase = EPlayerMovementPhase::Walking;
+	if (MovementPhase != EPlayerMovementPhase::None)
+	{
+		MovementPhase = EPlayerMovementPhase::Walking;
+	}
 }
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
@@ -379,9 +456,14 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		return;
 	}
 	Health -= Damage;
-	ActivateDebugDamageIndicator();
+	if (bDebug)
+	{
+		ActivateDebugDamageIndicator();
+	}
 	bIsInvincible = true;
 	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
+	DamageFXTimer = DamageFXTime;
+	PlayerActionDelegate.Broadcast(EPlayerAction::Damaged);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -406,7 +488,29 @@ void AHypercubeCharacter::PlayDeath()
 
 void AHypercubeCharacter::UpdateDamageMultiplier()
 {
-	DamageMulptiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+	TargetDamageMultiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+	if (TargetDamageMultiplier >= DamageMultiplier)
+	{
+		if (GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle))
+		{
+			GetWorld()->GetTimerManager().ClearTimer(DamageMultiplierStaysTimerHandle);
+		}
+		DamageMultiplier = TargetDamageMultiplier;
+	}
+	else
+	{
+		if (!GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle) && !bDamageMultiplierFalling)
+		{
+			GetWorld()->GetTimerManager().SetTimer(DamageMultiplierStaysTimerHandle, this, &AHypercubeCharacter::OnEndDamageMultiplierStays, DamageMultiplierStaysTime, false);
+			bDamageMultiplierStays = true;
+		}
+	}
+}
+
+void AHypercubeCharacter::OnEndDamageMultiplierStays()
+{
+	bDamageMultiplierStays = false;
+	bDamageMultiplierFalling = true;
 }
 
 void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
@@ -420,15 +524,74 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 
 void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 {
-	Score += BaseScoreForEnemy * DamageMulptiplier;
+	Score += BaseScoreForEnemy * DamageMultiplier;
+	Health += Vampirism * Enemy->MaxHealth;
+	Health = Health > MaxHealth ? MaxHealth : Health;
 	if (LevelController)
 	{
 		LevelController->RemoveEnemy(Enemy);
-		LevelController->UpdateMaxMultiplicator(DamageMulptiplier);
+		LevelController->UpdateMaxMultiplicator(DamageMultiplier);
 	}
 	if (EnemyChasing.Contains(Enemy))
 	{
 		EnemyChasing.Remove(Enemy);
 		UpdateDamageMultiplier();
 	}
+}
+
+void AHypercubeCharacter::Pause()
+{
+	bIsGamePaused = !bIsGamePaused;
+	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
+	PlayerController->bShowMouseCursor = bIsGamePaused;
+	PlayerController->bEnableClickEvents = bIsGamePaused;
+	PlayerController->bEnableMouseOverEvents = bIsGamePaused;
+	if (bIsGamePaused)
+	{
+		PlayerController->SetInputMode(FInputModeGameAndUI());
+	}
+	else
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly());
+	}
+	PauseDelegate.Broadcast(bIsGamePaused);
+}
+
+ABase_LevelController* AHypercubeCharacter::GetLevelController() const
+{
+	return LevelController;
+}
+
+int AHypercubeCharacter::GetEnemyChasingCount() const
+{
+	return EnemyChasing.Num();
+}
+
+void AHypercubeCharacter::SetSpeedBuff(float SpeedMult, float JumpMult, float Time)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(SpeedBuffTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(SpeedBuffTimerHandle);
+	}
+	else
+	{
+		BaseSpeed = MoveComp->MaxWalkSpeed;
+		BaseJumpVelocity = MoveComp->JumpZVelocity;
+		BaseCameraFov = TargetCameraFov;
+
+		MoveComp->MaxWalkSpeed *= SpeedMult;
+		MoveComp->JumpZVelocity *= JumpMult;
+		TargetCameraFov *= 1.3f;
+
+		SpeedBuffEffectWidget->SetVisibility(true);
+	}
+	GetWorld()->GetTimerManager().SetTimer(SpeedBuffTimerHandle, this, &AHypercubeCharacter::OnEndSpeedBuff, Time, false);
+}
+
+void AHypercubeCharacter::OnEndSpeedBuff()
+{
+	MoveComp->MaxWalkSpeed = BaseSpeed;
+	MoveComp->JumpZVelocity = BaseJumpVelocity;
+	TargetCameraFov = BaseCameraFov;
+	SpeedBuffEffectWidget->SetVisibility(false);
 }

@@ -43,6 +43,16 @@ enum class EAttackPhase : uint8
 	AfterAttack UMETA(DisplayName = "AfterAttack")
 };
 
+UENUM(BlueprintType)
+enum class EEnemyPhase : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Noticing UMETA(DisplayName = "Noticing"),
+	Chasing UMETA(DisplayName = "Chasing")
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDamaged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJumpEnd, bool, success);
 
@@ -69,9 +79,24 @@ class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* Debug_DamageIndicator;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UWidgetComponent* SlowDebuffEffectWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UWidgetComponent* DamageDebuffEffectWidget;
+
 public:
 
 	ABase_NPC_SimpleChase();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = LevelController)
+	class ABase_LevelController* LevelController;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyDamaged EnemyDamagedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyDeath EnemyDeathDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAttackEnd AttackEndDelegate;
@@ -91,20 +116,27 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroRadius;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
+	float AggroTime;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDebug;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float Debug_DamageIndicatorTime;
 
 protected:
 
-	class ABase_LevelController* LevelController;
-
 	uint8 TickSemaphore;
 
+	FTimerHandle NoticeTimerHandle;
+	EEnemyPhase MovePhase;
+
 	FTimerHandle AttackTimerHandle;
-	EAttackPhase Phase;
+	EAttackPhase AttackPhase;
 	class AHypercubeCharacter* AttackTarget;
 
 	FTimerHandle DelayedInitTimerHandle;
@@ -128,6 +160,14 @@ protected:
 	FTimerHandle JumpTimerHandle;
 	void OnEndJump();
 
+	FTimerHandle SlowDebuffTimerHandle;
+	float BaseSpeed;
+	void OnEndSlowDebuff();
+
+	FTimerHandle DamageDebuffTimerHandle;
+	float BaseDamage;
+	void OnEndDamageDebuff();
+
 public:	
 
 	UFUNCTION(BlueprintCallable)
@@ -143,6 +183,9 @@ public:
 	void OnNotice();
 
 	UFUNCTION(BlueprintCallable)
+	void AfterNotice();
+
+	UFUNCTION(BlueprintCallable)
 	void Attack();
 
 	UFUNCTION(BlueprintCallable)
@@ -150,4 +193,16 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	class ABase_LevelController* GetLevelController() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	class USphereComponent* GetNoticeCollision() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetSlowDebuff(float Mult, float Time);
+
+	UFUNCTION(BlueprintCallable)
+	void SetDamageDebuff(float Mult, float Time);
 };
