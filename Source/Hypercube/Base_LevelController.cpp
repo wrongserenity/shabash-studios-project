@@ -14,6 +14,7 @@ ABase_LevelController::ABase_LevelController()
 	PrimaryActorTick.bCanEverTick = true;
 
 	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
+	FewEnemiesEventPercentage = 0.03f;
 
 	NoticeSoundTurnOffTime = 1.0f;
 	bEnemyCanNoticeSound = true;
@@ -116,7 +117,7 @@ int ABase_LevelController::GetCurMapIndex() const
 	const FString Prefix = "UEDPIE_0_";
 	for (int i = 0; i < LevelNames.Num(); ++i)
 	{
-		if (CurMapName == Prefix + LevelNames[i])
+		if (CurMapName == Prefix + LevelNames[i] || CurMapName == LevelNames[i])
 		{
 			return i;
 		}
@@ -153,7 +154,9 @@ void ABase_LevelController::SpawnEnemies()
 	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * EnemyPercentage);
 	BeginEnemyCount = BeginEnemyCount > SpawnPoints.Num() ? SpawnPoints.Num() : BeginEnemyCount;
 	CurLevelData.TotalEnemies = BeginEnemyCount;
+	FewEnemiesEventCount = FMath::CeilToInt(FewEnemiesEventPercentage * (float)BeginEnemyCount);
 	UE_LOG(LogTemp, Warning, TEXT("Enemies spawned: %d"), BeginEnemyCount);
+	UE_LOG(LogTemp, Warning, TEXT("Few enemies event: %d"), FewEnemiesEventCount);
 	for (int i = 0; i < BeginEnemyCount; ++i)
 	{
 		ABase_EnemySpawnPoint* SpawnPoint = Cast<ABase_EnemySpawnPoint>(SpawnPoints[i]);
@@ -191,6 +194,11 @@ void ABase_LevelController::RemoveEnemy(class ABase_NPC_SimpleChase* Enemy)
 	{
 		Enemies.Remove(Enemy);
 		AddEnemiesKilled();
+	}
+	if (Enemies.Num() <= FewEnemiesEventCount)
+	{
+		FewEnemiesRemainingDelegate.Broadcast();
+		UE_LOG(LogTemp, Warning, TEXT("Few enemies remaining!"));
 	}
 	if (!Enemies.Num())
 	{

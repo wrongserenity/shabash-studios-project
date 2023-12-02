@@ -9,6 +9,7 @@
 #include "Base_LevelController.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFewEnemiesRemaining);
 
 UCLASS()
 class HYPERCUBE_API ABase_LevelController : public AActor
@@ -31,6 +32,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAllEnemiesDead AllEnemiesDeadDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnFewEnemiesRemaining FewEnemiesRemainingDelegate;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FString SaveSlotName;
 
@@ -45,6 +49,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float AfterAllEnemiesDeadTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	float FewEnemiesEventPercentage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float NoticeSoundTurnOffTime;
@@ -146,6 +153,7 @@ protected:
 
 	int BeginEnemyCount;
 	int EnemiesKilled;
+	int FewEnemiesEventCount;
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;

@@ -12,6 +12,8 @@
 #include "Components/SphereComponent.h"
 #include "Base_LevelController.h"
 #include "Components/WidgetComponent.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "NavigationSystem.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -64,6 +66,10 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	MovePhase = EEnemyPhase::None;
 	AttackPhase = EAttackPhase::NotAttacking;
 	AttackTarget = nullptr;
+
+	UnstuckPlayerSightUpdate = 0.2f;
+	UnstuckAroundPlayerRadius = 1000.0f;
+	MaxAttempsToUnstuck = 10;
 
 	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
 	Debug_DamageIndicator->SetupAttachment(RootComponent);
@@ -223,7 +229,7 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 	{
 		ActivateDebugDamageIndicator();
 	}
-	EnemyDamagedDelegate.Broadcast();
+	EnemyActionDelegate.Broadcast(EEnemyAction::Damaged, true);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -271,7 +277,7 @@ void ABase_NPC_SimpleChase::Attack()
 		AttackPhase = EAttackPhase::NotAttacking;
 		SetDebugAttackCollision(false);
 		SetTickState(false);
-		AttackEndDelegate.Broadcast(true);
+		EnemyActionDelegate.Broadcast(EEnemyAction::AttackEnd, true);
 	}
 }
 
@@ -294,7 +300,7 @@ void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
 void ABase_NPC_SimpleChase::OnEndJump()
 {
 	UE_LOG(LogTemp, Warning, TEXT("EndJump!"));
-	JumpEndDelegate.Broadcast(true);
+	EnemyActionDelegate.Broadcast(EEnemyAction::JumpEnd, true);
 }
 
 void ABase_NPC_SimpleChase::PlayDeath()
@@ -357,4 +363,46 @@ void ABase_NPC_SimpleChase::OnEndDamageDebuff()
 {
 	SimpleAttack.Damage = BaseDamage;
 	DamageDebuffEffectWidget->SetVisibility(false);
+}
+
+bool ABase_NPC_SimpleChase::PlayerHasSightOn() const
+{
+	if (!AttackTarget->GetController()->LineOfSightTo(this))
+	{
+		return false;
+	}
+	FVector2D ScreenLocation;
+	if (!UGameplayStatics::ProjectWorldToScreen(UGameplayStatics::GetPlayerController(GetWorld(), 0), GetActorLocation(), ScreenLocation))
+	{
+		return false;
+	}
+	const FVector2D ViewportSize = FVector2D(GEngine->GameViewport->Viewport->GetSizeXY());
+	return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X && ScreenLocation.Y < ViewportSize.Y;
+}
+
+void ABase_NPC_SimpleChase::Unstuck()
+{
+	if (PlayerHasSightOn())
+	{
+		GetWorld()->GetTimerManager().SetTimer(CheckPlayerSightTimerHandle, this, &ABase_NPC_SimpleChase::Unstuck, UnstuckPlayerSightUpdate, false);
+		return;
+	}
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARecastNavMesh::StaticClass(), FoundActors);
+	class ARecastNavMesh* NavData = Cast<ARecastNavMesh>(FoundActors[0]);
+	FNavLocation FindResult;
+	FVector PlayerLocation = AttackTarget->GetActorLocation();
+	for (int i = 0; i < MaxAttempsToUnstuck; ++i)
+	{
+		if (NavData->GetRandomReachablePointInRadius(PlayerLocation, UnstuckAroundPlayerRadius, FindResult))
+		{
+			SetActorLocation(FindResult.Location, false, nullptr, ETeleportType::ResetPhysics);
+			if (!PlayerHasSightOn())
+			{
+				EnemyActionDelegate.Broadcast(EEnemyAction::UnstuckEnd, true);
+				return;
+			}
+		}
+	}
+	EnemyActionDelegate.Broadcast(EEnemyAction::UnstuckEnd, false);
 }
