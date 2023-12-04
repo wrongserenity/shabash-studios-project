@@ -183,13 +183,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float CameraFovChangeSpeed;
 
+	UPROPERTY(BlueprintReadOnly, Category = "State")
+	EPlayerMovementPhase MovementPhase;
+
+	UPROPERTY(BlueprintReadOnly, Category = "State")
+	EPlayerAttackPhase AttackPhase;
+
 protected:
 
 	class UCharacterMovementComponent* MoveComp;
 	class UInputComponent* InputComp;
-
-	EPlayerMovementPhase MovementPhase;
-	EPlayerAttackPhase AttackPhase;
 
 	bool bCanDash;
 	bool bDashMovementBlocked;
