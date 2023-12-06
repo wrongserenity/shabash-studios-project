@@ -8,7 +8,25 @@
 #include "Containers/SortedMap.h"
 #include "Base_LevelController.generated.h"
 
+USTRUCT(BlueprintType)
+struct FScoreboardData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Score;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DifficultyParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int LevelIndex;
+
+	bool operator<(const FScoreboardData& Other) const;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFewEnemiesRemaining);
 
 UCLASS()
 class HYPERCUBE_API ABase_LevelController : public AActor
@@ -31,6 +49,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAllEnemiesDead AllEnemiesDeadDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnFewEnemiesRemaining FewEnemiesRemainingDelegate;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FString SaveSlotName;
 
@@ -44,7 +65,7 @@ public:
 	float AfterPlayerDeathTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	float AfterAllEnemiesDeadTime;
+	float FewEnemiesEventPercentage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float NoticeSoundTurnOffTime;
@@ -66,6 +87,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	TArray<FString> LevelNames;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	TArray<FString> LevelNamesToShow;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
 	TArray<int> DeathCountBounds;
@@ -146,6 +170,7 @@ protected:
 
 	int BeginEnemyCount;
 	int EnemiesKilled;
+	int FewEnemiesEventCount;
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
@@ -203,13 +228,16 @@ public:
 	void OnAllEnemiesDead();
 
 	UFUNCTION(BlueprintCallable)
-	void AfterAllEnemiesDead();
-
-	UFUNCTION(BlueprintCallable)
 	void SaveLevelData();
 
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
+
+	UFUNCTION(BlueprintCallable)
+	void ReloadCurrentLevel();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadNextLevel();
 
 	UFUNCTION(BlueprintCallable)
 	void SetNoticeSoundTurnOff();
