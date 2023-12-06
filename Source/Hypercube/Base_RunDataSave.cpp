@@ -1,4 +1,3 @@
-
 #include "Base_RunDataSave.h"
 
 void FLevelData::Log()

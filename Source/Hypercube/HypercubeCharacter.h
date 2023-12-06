@@ -280,6 +280,9 @@ public:
 	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
+	void SetMouseCursorShow(bool Activate);
+
+	UFUNCTION(BlueprintCallable)
 	void Pause();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)

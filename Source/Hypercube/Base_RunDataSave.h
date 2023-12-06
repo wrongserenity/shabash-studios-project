@@ -35,6 +35,12 @@ struct FLevelData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayTime;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DifficultyParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int LevelIndex;
+
 	void Log();
 };
 
