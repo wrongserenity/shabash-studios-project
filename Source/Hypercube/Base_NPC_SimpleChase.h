@@ -51,10 +51,17 @@ enum class EEnemyPhase : uint8
 	Chasing UMETA(DisplayName = "Chasing")
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDamaged);
+UENUM(BlueprintType)
+enum class EEnemyAction : uint8
+{
+	AttackEnd UMETA(DisplayName = "AttackEnd"),
+	JumpEnd UMETA(DisplayName = "JumpEnd"),
+	UnstuckEnd UMETA(DisplayName = "UnstuckEnd"),
+	Damaged UMETA(DisplayName = "Damaged")
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttackEnd, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnJumpEnd, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyAction, EEnemyAction, Action, bool, Success);
 
 UCLASS()
 class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
@@ -93,16 +100,10 @@ public:
 	class ABase_LevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
-	FOnEnemyDamaged EnemyDamagedDelegate;
-
-	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnEnemyDeath EnemyDeathDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
-	FOnAttackEnd AttackEndDelegate;
-
-	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
-	FOnJumpEnd JumpEndDelegate;
+	FOnEnemyAction EnemyActionDelegate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float Health;
@@ -121,6 +122,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
+	float UnstuckPlayerSightUpdate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
+	float UnstuckAroundPlayerRadius;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
+	int MaxAttempsToUnstuck;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bDebug;
@@ -168,6 +178,8 @@ protected:
 	float BaseDamage;
 	void OnEndDamageDebuff();
 
+	FTimerHandle CheckPlayerSightTimerHandle;
+
 public:	
 
 	UFUNCTION(BlueprintCallable)
@@ -205,4 +217,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetDamageDebuff(float Mult, float Time);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool PlayerHasSightOn() const;
+
+	UFUNCTION(BlueprintCallable)
+	void Unstuck();
 };
