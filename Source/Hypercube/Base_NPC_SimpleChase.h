@@ -57,7 +57,11 @@ enum class EEnemyAction : uint8
 	AttackEnd UMETA(DisplayName = "AttackEnd"),
 	JumpEnd UMETA(DisplayName = "JumpEnd"),
 	UnstuckEnd UMETA(DisplayName = "UnstuckEnd"),
-	Damaged UMETA(DisplayName = "Damaged")
+	Damaged UMETA(DisplayName = "Damaged"),
+	SlowDebuff UMETA(DisplayName = "SlowDebuff"),
+	SlowDebuffEnd UMETA(DisplayName = "SlowDebuffEnd"),
+	DamageDecreaseDebuff UMETA(DisplayName = "AttackDecreaseDebuff"),
+	DamageDecreaseDebuffEnd UMETA(DisplayName = "AttackDecreaseDebuffEnd")
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
@@ -86,11 +90,11 @@ class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* Debug_DamageIndicator;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* SlowDebuffEffectWidget;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	//class UWidgetComponent* SlowDebuffEffectWidget;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* DamageDebuffEffectWidget;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	//class UWidgetComponent* DamageDebuffEffectWidget;
 
 public:
 
