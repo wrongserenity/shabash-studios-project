@@ -180,11 +180,15 @@ protected:
 
 	float MusicRefreshTimer;
 
+	TArray<FScoreboardData> Scores;
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 	int GetCurMapIndex() const;
+
+	void ReadScoreboardData();
 
 	FTimerHandle NoticeSoundTurnOffTimerHandle;
 	void OnEndNoticeSoundTurnedOff();
@@ -264,10 +268,23 @@ public:
 	float GetTargetMusicParameter();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FString GetScoreboard(int Num) const;
+	FString GetScoreboard(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardEnumerate(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardLevels(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardScores(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardDiffs(int Num);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetDifficultyBrief() const;
+
 };
 
 template<typename T>
