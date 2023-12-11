@@ -66,6 +66,9 @@ ABase_LevelController::ABase_LevelController()
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 
+	MusicComp_Explore = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Exploration"));
+	MusicComp_Explore->SetupAttachment(RootComponent);
+
 	MusicComp_Low = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Low"));
 	MusicComp_Low->SetupAttachment(RootComponent);
 
@@ -90,8 +93,10 @@ void ABase_LevelController::BeginPlay()
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
+	MusicComp_Explore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+	MusicComp_Explore->Play();
 	MusicComp_Low->Play();
 	MusicComp_High->Play();
 	Super::BeginPlay();
@@ -112,6 +117,7 @@ void ABase_LevelController::Tick(float DeltaSeconds)
 		{
 			MusicParameter = TargetMusicParameter;
 		}
+		MusicComp_Explore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
