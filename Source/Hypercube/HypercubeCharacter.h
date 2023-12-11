@@ -183,6 +183,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float CameraFovChangeSpeed;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	float DashBarPercentage;
+
 	UPROPERTY(BlueprintReadOnly, Category = "State")
 	EPlayerMovementPhase MovementPhase;
 
@@ -198,8 +201,7 @@ protected:
 	bool bDashMovementBlocked;
 	FVector DashDestination;
 	float DashTimer;
-
-	FTimerHandle DashCooldownTimerHandle;
+	float DashCooldownTimer;
 
 	bool bIsInvincible;
 	FTimerHandle InvincTimerHandle;
