@@ -1,4 +1,4 @@
-# shabash-studios-project
+# Hypercube
 Game with an adaptive difficulty system based on Unreal Engine 4.
 
 ![image](https://github.com/wrongserenity/shabash-studios-project/assets/43683367/1c047c66-b500-4023-96a2-658ce8ed838e)
