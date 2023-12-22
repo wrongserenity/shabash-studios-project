@@ -183,20 +183,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float CameraFovChangeSpeed;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	float DashBarPercentage;
+
+	UPROPERTY(BlueprintReadOnly, Category = "State")
+	EPlayerMovementPhase MovementPhase;
+
+	UPROPERTY(BlueprintReadOnly, Category = "State")
+	EPlayerAttackPhase AttackPhase;
+
 protected:
 
 	class UCharacterMovementComponent* MoveComp;
 	class UInputComponent* InputComp;
 
-	EPlayerMovementPhase MovementPhase;
-	EPlayerAttackPhase AttackPhase;
-
 	bool bCanDash;
 	bool bDashMovementBlocked;
 	FVector DashDestination;
 	float DashTimer;
-
-	FTimerHandle DashCooldownTimerHandle;
+	float DashCooldownTimer;
 
 	bool bIsInvincible;
 	FTimerHandle InvincTimerHandle;
@@ -278,6 +283,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void SetMouseCursorShow(bool Activate);
 
 	UFUNCTION(BlueprintCallable)
 	void Pause();

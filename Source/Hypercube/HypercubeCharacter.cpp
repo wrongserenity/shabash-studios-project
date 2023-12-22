@@ -66,9 +66,9 @@ AHypercubeCharacter::AHypercubeCharacter()
 	bIsInvincible = false;
 
 	DashDistance = 700.0f;
-	DashTime = 0.2f;
+	DashTime = DashTimer = 0.2f;
 	DashMoveControlTime = 0.1f;
-	DashCooldownTime = 0.5f;
+	DashCooldownTime = DashCooldownTimer = 1.5f;
 
 	Score = 0.0f;
 	BaseScoreForEnemy = 10.0f;
@@ -125,6 +125,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	SpeedBuffEffectWidget->SetupAttachment(RootComponent);
 	SpeedBuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
 	SpeedBuffEffectWidget->SetVisibility(false);
+
+	DashBarPercentage = 1.0f;
 }
 
 void AHypercubeCharacter::BeginPlay()
@@ -190,6 +192,15 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 	{
 		DashTick(DeltaSeconds);
 	}
+	else if (DashCooldownTimer < DashCooldownTime)
+	{
+		DashCooldownTimer += DeltaSeconds;
+		DashBarPercentage = DashCooldownTimer / DashCooldownTime - 0.1f;
+		if (DashCooldownTimer >= DashCooldownTime)
+		{
+			OnEndDashCooldown();
+		}
+	}
 	if (AttackPhase == EPlayerAttackPhase::Attacking)
 	{
 		AttackTick();
@@ -227,6 +238,7 @@ void AHypercubeCharacter::DashTick(float DeltaSeconds)
 {
 	AddActorWorldOffset(DashDestination * (DashDistance / DashTime) * DashVelocityCurve(DashTimer / DashTime) * DeltaSeconds, true);
 	DashTimer += DeltaSeconds;
+	DashBarPercentage = 1.0f - DashTimer / DashTime;
 	if (bDashMovementBlocked && DashTime - DashTimer <= DashMoveControlTime)
 	{
 		AllowMovingWhileDash();
@@ -359,7 +371,7 @@ void AHypercubeCharacter::StopDashing()
 	bDashMovementBlocked = true;
 	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 	//UE_LOG(LogTemp, Warning, TEXT("End of dash"));
-	GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AHypercubeCharacter::OnEndDashCooldown, DashCooldownTime, false);
+	DashCooldownTimer = 0.0f;
 }
 
 void AHypercubeCharacter::OnEndDashCooldown()
@@ -539,14 +551,12 @@ void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 	}
 }
 
-void AHypercubeCharacter::Pause()
+void AHypercubeCharacter::SetMouseCursorShow(bool Activate)
 {
-	bIsGamePaused = !bIsGamePaused;
-	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
-	PlayerController->bShowMouseCursor = bIsGamePaused;
-	PlayerController->bEnableClickEvents = bIsGamePaused;
-	PlayerController->bEnableMouseOverEvents = bIsGamePaused;
-	if (bIsGamePaused)
+	PlayerController->bShowMouseCursor = Activate;
+	PlayerController->bEnableClickEvents = Activate;
+	PlayerController->bEnableMouseOverEvents = Activate;
+	if (Activate)
 	{
 		PlayerController->SetInputMode(FInputModeGameAndUI());
 	}
@@ -554,6 +564,13 @@ void AHypercubeCharacter::Pause()
 	{
 		PlayerController->SetInputMode(FInputModeGameOnly());
 	}
+}
+
+void AHypercubeCharacter::Pause()
+{
+	bIsGamePaused = !bIsGamePaused;
+	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
+	SetMouseCursorShow(bIsGamePaused);
 	PauseDelegate.Broadcast(bIsGamePaused);
 }
 

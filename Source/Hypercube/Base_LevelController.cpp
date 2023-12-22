@@ -9,11 +9,17 @@
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
 
+bool FScoreboardData::operator<(const FScoreboardData& Other) const
+{
+	return Score > Other.Score;
+}
+
 ABase_LevelController::ABase_LevelController()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	AfterPlayerDeathTime = AfterAllEnemiesDeadTime = 5.0f;
+	AfterPlayerDeathTime = 5.0f;
+	FewEnemiesEventPercentage = 0.03f;
 
 	NoticeSoundTurnOffTime = 1.0f;
 	bEnemyCanNoticeSound = true;
@@ -25,6 +31,7 @@ ABase_LevelController::ABase_LevelController()
 	bEnemyCanDeathSound = true;
 
 	LevelNames = { "training", "level_1_upd", "level_2", "level_3" };
+	LevelNamesToShow = { "Tutorial", "Level1", "Level2", "Level3" };
 
 	SaveSlotName = "RunDataSaveSlot";
 	CurLevelData = { false, 0.0f, 0.0f, 0, 1.0f, 1.0f, 0, 0.0f };
@@ -59,6 +66,9 @@ ABase_LevelController::ABase_LevelController()
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 
+	MusicComp_Explore = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Exploration"));
+	MusicComp_Explore->SetupAttachment(RootComponent);
+
 	MusicComp_Low = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Low"));
 	MusicComp_Low->SetupAttachment(RootComponent);
 
@@ -83,8 +93,10 @@ void ABase_LevelController::BeginPlay()
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
+	MusicComp_Explore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+	MusicComp_Explore->Play();
 	MusicComp_Low->Play();
 	MusicComp_High->Play();
 	Super::BeginPlay();
@@ -105,6 +117,7 @@ void ABase_LevelController::Tick(float DeltaSeconds)
 		{
 			MusicParameter = TargetMusicParameter;
 		}
+		MusicComp_Explore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
@@ -116,12 +129,29 @@ int ABase_LevelController::GetCurMapIndex() const
 	const FString Prefix = "UEDPIE_0_";
 	for (int i = 0; i < LevelNames.Num(); ++i)
 	{
-		if (CurMapName == Prefix + LevelNames[i])
+		if (CurMapName == Prefix + LevelNames[i] || CurMapName == LevelNames[i])
 		{
 			return i;
 		}
 	}
 	return -1;
+}
+
+void ABase_LevelController::ReadScoreboardData()
+{
+	if (Scores.Num())
+	{
+		return;
+	}
+	for (int i = 0; i < LevelData.Num(); ++i)
+	{
+		if (LevelData[i].Score > 0.0f)
+		{
+			FScoreboardData Data = { LevelData[i].Score, LevelData[i].DifficultyParameter, LevelData[i].LevelIndex };
+			Scores.Add(Data);
+		}
+	}
+	Scores.Sort();
 }
 
 void ABase_LevelController::LoadLevelData()
@@ -153,7 +183,9 @@ void ABase_LevelController::SpawnEnemies()
 	BeginEnemyCount = FMath::CeilToInt(float(SpawnPoints.Num()) * EnemyPercentage);
 	BeginEnemyCount = BeginEnemyCount > SpawnPoints.Num() ? SpawnPoints.Num() : BeginEnemyCount;
 	CurLevelData.TotalEnemies = BeginEnemyCount;
+	FewEnemiesEventCount = FMath::CeilToInt(FewEnemiesEventPercentage * (float)BeginEnemyCount);
 	UE_LOG(LogTemp, Warning, TEXT("Enemies spawned: %d"), BeginEnemyCount);
+	UE_LOG(LogTemp, Warning, TEXT("Few enemies event: %d"), FewEnemiesEventCount);
 	for (int i = 0; i < BeginEnemyCount; ++i)
 	{
 		ABase_EnemySpawnPoint* SpawnPoint = Cast<ABase_EnemySpawnPoint>(SpawnPoints[i]);
@@ -192,6 +224,11 @@ void ABase_LevelController::RemoveEnemy(class ABase_NPC_SimpleChase* Enemy)
 		Enemies.Remove(Enemy);
 		AddEnemiesKilled();
 	}
+	if (Enemies.Num() <= FewEnemiesEventCount)
+	{
+		FewEnemiesRemainingDelegate.Broadcast();
+		UE_LOG(LogTemp, Warning, TEXT("Few enemies remaining!"));
+	}
 	if (!Enemies.Num())
 	{
 		OnAllEnemiesDead();
@@ -215,6 +252,7 @@ void ABase_LevelController::SetPlayerCharacter(class AHypercubeCharacter* Player
 void ABase_LevelController::OnPlayerDeath()
 {
 	CurLevelData.PlayerWon = false;
+	TargetMusicParameter = 0.0f;
 	SaveLevelData();
 	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
 }
@@ -229,12 +267,6 @@ void ABase_LevelController::OnAllEnemiesDead()
 	CurLevelData.PlayerWon = true;
 	SaveLevelData();
 	AllEnemiesDeadDelegate.Broadcast();
-	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterAllEnemiesDead, AfterAllEnemiesDeadTime, false);
-}
-
-void ABase_LevelController::AfterAllEnemiesDead()
-{
-	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[(CurLevelIndex + 1) % LevelNames.Num()]));
 }
 
 void ABase_LevelController::SaveLevelData()
@@ -245,6 +277,8 @@ void ABase_LevelController::SaveLevelData()
 	CurLevelData.OnDeathMultiplicator = Player->DamageMultiplier;
 	CurLevelData.OnDeathEnemyChasing = Player->GetEnemyChasingCount();
 	CurLevelData.PlayTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+	CurLevelData.DifficultyParameter = DifficultyParameter;
+	CurLevelData.LevelIndex = CurLevelIndex;
 	LevelData.Add(CurLevelData);
 	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
 	if (SaveGameInstance)
@@ -257,6 +291,16 @@ void ABase_LevelController::SaveLevelData()
 void ABase_LevelController::ClearLevelData()
 {
 	LevelData.Empty();
+}
+
+void ABase_LevelController::ReloadCurrentLevel()
+{
+	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[CurLevelIndex < 0 ? 0 : CurLevelIndex]));
+}
+
+void ABase_LevelController::LoadNextLevel()
+{
+	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[(CurLevelIndex + 1) % LevelNames.Num()]));
 }
 
 void ABase_LevelController::SetNoticeSoundTurnOff()
@@ -337,6 +381,10 @@ void ABase_LevelController::SetEnemyParams(class ABase_NPC_SimpleChase* Enemy)
 
 float ABase_LevelController::GetTargetMusicParameter()
 {
+	if (Player->Health <= 0.0f)
+	{
+		return 0.0f;
+	}
 	int ChasingCount = Player->GetEnemyChasingCount();
 	if (!ChasingCount)
 	{
@@ -349,28 +397,86 @@ float ABase_LevelController::GetTargetMusicParameter()
 	return 1.0f;
 }
 
-FString ABase_LevelController::GetScoreboard(int Num) const
+FString ABase_LevelController::GetScoreboard(int Num)
 {
-	TArray<float> Scores;
-	for (int i = 0; i < LevelData.Num(); ++i)
-	{
-		if (LevelData[i].Score > 0.0f)
-		{
-			Scores.Add(LevelData[i].Score);
-		}
-	}
+	ReadScoreboardData();
 	if (!Scores.Num())
 	{
 		return FString("");
 	}
-	Scores.Sort();
-	FString Result = "Scoreboard:\n\n";
+	FString Result = "Scoreboard:\n\n      Level        Difficulty    Score\n";
 	Num = Num > Scores.Num() ? Scores.Num() : Num;
 	for (int i = 0; i < Num; ++i)
 	{
+		FScoreboardData Data = Scores[Scores.Num() - 1 - i];
 		Result.AppendInt(i + 1);
-		Result += FString(". ");
-		Result.AppendInt(FMath::RoundToInt(Scores[Scores.Num() - 1 - i]));
+		Result += (i + 1 < 10) ? FString(".  ") : FString(". ");
+		FString LevelName = (Data.LevelIndex >= 0 && Data.LevelIndex < LevelNamesToShow.Num()) ? LevelNamesToShow[Data.LevelIndex] : FString("????");
+		Result += LevelName;
+		for (int j = 0; j < 12 - LevelName.Len(); ++j)
+		{
+			Result.AppendChar(' ');
+		}
+		FString DifficultyString = FloatToFString(Data.DifficultyParameter);
+		Result += DifficultyString;
+		int SpaceCount = DifficultyString.Len() < 3 ? 20 : 13;
+		for (int j = 0; j < SpaceCount; ++j)
+		{
+			Result.AppendChar(' ');
+		}
+		Result.AppendInt(FMath::RoundToInt(Data.Score));
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardEnumerate(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result.AppendInt(i + 1);
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardLevels(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("Level\n\n");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result += (Scores[i].LevelIndex >= 0 && Scores[i].LevelIndex < LevelNamesToShow.Num()) ? LevelNamesToShow[Scores[i].LevelIndex] : FString("????");
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardScores(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("Score\n\n");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result.AppendInt(FMath::RoundToInt(Scores[i].Score));
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardDiffs(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("Difficulty\n\n");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result += FloatToFString(Scores[i].DifficultyParameter);
 		Result.AppendChar('\n');
 	}
 	return Result;

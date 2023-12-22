@@ -12,6 +12,8 @@
 #include "Components/SphereComponent.h"
 #include "Base_LevelController.h"
 #include "Components/WidgetComponent.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "NavigationSystem.h"
 
 // Sets default values
 ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
@@ -65,6 +67,10 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	AttackPhase = EAttackPhase::NotAttacking;
 	AttackTarget = nullptr;
 
+	UnstuckPlayerSightUpdate = 0.2f;
+	UnstuckAroundPlayerRadius = 1000.0f;
+	MaxAttempsToUnstuck = 10;
+
 	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
 	Debug_DamageIndicator->SetupAttachment(RootComponent);
 	Debug_DamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
@@ -76,16 +82,16 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 
 	bDebug = false;
 
-	SlowDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Slow Debuff Effect"));
-	SlowDebuffEffectWidget->SetupAttachment(RootComponent);
-	SlowDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	SlowDebuffEffectWidget->SetVisibility(false);
+	//SlowDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Slow Debuff Effect"));
+	//SlowDebuffEffectWidget->SetupAttachment(RootComponent);
+	//SlowDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	//SlowDebuffEffectWidget->SetVisibility(false);
 
 	
-	DamageDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Damage Debuff Effect"));
-	DamageDebuffEffectWidget->SetupAttachment(RootComponent);
-	DamageDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	DamageDebuffEffectWidget->SetVisibility(false);
+	//DamageDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Damage Debuff Effect"));
+	//DamageDebuffEffectWidget->SetupAttachment(RootComponent);
+	//DamageDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	//DamageDebuffEffectWidget->SetVisibility(false);
 }
 
 // Called when the game starts or when spawned
@@ -223,7 +229,7 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 	{
 		ActivateDebugDamageIndicator();
 	}
-	EnemyDamagedDelegate.Broadcast();
+	EnemyActionDelegate.Broadcast(EEnemyAction::Damaged, true);
 	if (Health <= 0.0f)
 	{
 		PlayDeath();
@@ -271,7 +277,7 @@ void ABase_NPC_SimpleChase::Attack()
 		AttackPhase = EAttackPhase::NotAttacking;
 		SetDebugAttackCollision(false);
 		SetTickState(false);
-		AttackEndDelegate.Broadcast(true);
+		EnemyActionDelegate.Broadcast(EEnemyAction::AttackEnd, true);
 	}
 }
 
@@ -294,7 +300,7 @@ void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
 void ABase_NPC_SimpleChase::OnEndJump()
 {
 	UE_LOG(LogTemp, Warning, TEXT("EndJump!"));
-	JumpEndDelegate.Broadcast(true);
+	EnemyActionDelegate.Broadcast(EEnemyAction::JumpEnd, true);
 }
 
 void ABase_NPC_SimpleChase::PlayDeath()
@@ -325,7 +331,9 @@ void ABase_NPC_SimpleChase::SetSlowDebuff(float Mult, float Time)
 
 		MoveComp->MaxWalkSpeed *= Mult;
 
-		SlowDebuffEffectWidget->SetVisibility(true);
+		//SlowDebuffEffectWidget->SetVisibility(true);
+
+		EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuff, true);
 	}
 	GetWorld()->GetTimerManager().SetTimer(SlowDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndSlowDebuff, Time, false);
 }
@@ -333,7 +341,8 @@ void ABase_NPC_SimpleChase::SetSlowDebuff(float Mult, float Time)
 void ABase_NPC_SimpleChase::OnEndSlowDebuff()
 {
 	MoveComp->MaxWalkSpeed = BaseSpeed;
-	SlowDebuffEffectWidget->SetVisibility(false);
+	//SlowDebuffEffectWidget->SetVisibility(false);
+	EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuffEnd, true);
 }
 
 void ABase_NPC_SimpleChase::SetDamageDebuff(float Mult, float Time)
@@ -348,13 +357,58 @@ void ABase_NPC_SimpleChase::SetDamageDebuff(float Mult, float Time)
 
 		SimpleAttack.Damage *= Mult;
 
-		DamageDebuffEffectWidget->SetVisibility(true);
+		//DamageDebuffEffectWidget->SetVisibility(true);
+
+		EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuff, true);
 	}
-	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndSlowDebuff, Time, false);
+	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndDamageDebuff, Time, false);
 }
 
 void ABase_NPC_SimpleChase::OnEndDamageDebuff()
 {
 	SimpleAttack.Damage = BaseDamage;
-	DamageDebuffEffectWidget->SetVisibility(false);
+	//DamageDebuffEffectWidget->SetVisibility(false);
+	EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuffEnd, true);
+}
+
+bool ABase_NPC_SimpleChase::PlayerHasSightOn() const
+{
+	if (!AttackTarget->GetController()->LineOfSightTo(this))
+	{
+		return false;
+	}
+	FVector2D ScreenLocation;
+	if (!UGameplayStatics::ProjectWorldToScreen(UGameplayStatics::GetPlayerController(GetWorld(), 0), GetActorLocation(), ScreenLocation))
+	{
+		return false;
+	}
+	const FVector2D ViewportSize = FVector2D(GEngine->GameViewport->Viewport->GetSizeXY());
+	return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X && ScreenLocation.Y < ViewportSize.Y;
+}
+
+void ABase_NPC_SimpleChase::Unstuck()
+{
+	if (PlayerHasSightOn())
+	{
+		GetWorld()->GetTimerManager().SetTimer(CheckPlayerSightTimerHandle, this, &ABase_NPC_SimpleChase::Unstuck, UnstuckPlayerSightUpdate, false);
+		return;
+	}
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARecastNavMesh::StaticClass(), FoundActors);
+	class ARecastNavMesh* NavData = Cast<ARecastNavMesh>(FoundActors[0]);
+	FNavLocation FindResult;
+	FVector PlayerLocation = AttackTarget->GetActorLocation();
+	for (int i = 0; i < MaxAttempsToUnstuck; ++i)
+	{
+		if (NavData->GetRandomReachablePointInRadius(PlayerLocation, UnstuckAroundPlayerRadius, FindResult))
+		{
+			SetActorLocation(FindResult.Location, false, nullptr, ETeleportType::ResetPhysics);
+			if (!PlayerHasSightOn())
+			{
+				EnemyActionDelegate.Broadcast(EEnemyAction::UnstuckEnd, true);
+				return;
+			}
+		}
+	}
+	EnemyActionDelegate.Broadcast(EEnemyAction::UnstuckEnd, false);
 }

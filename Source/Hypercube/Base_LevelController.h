@@ -8,20 +8,41 @@
 #include "Containers/SortedMap.h"
 #include "Base_LevelController.generated.h"
 
+USTRUCT(BlueprintType)
+struct FScoreboardData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Score;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DifficultyParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int LevelIndex;
+
+	bool operator<(const FScoreboardData& Other) const;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFewEnemiesRemaining);
 
 UCLASS()
 class HYPERCUBE_API ABase_LevelController : public AActor
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* Root;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	class UAudioComponent* MusicComp_Explore;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UAudioComponent* MusicComp_Low;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UAudioComponent* MusicComp_High;
 
 public:	
@@ -30,6 +51,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAllEnemiesDead AllEnemiesDeadDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnFewEnemiesRemaining FewEnemiesRemainingDelegate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FString SaveSlotName;
@@ -44,7 +68,7 @@ public:
 	float AfterPlayerDeathTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	float AfterAllEnemiesDeadTime;
+	float FewEnemiesEventPercentage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float NoticeSoundTurnOffTime;
@@ -66,6 +90,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	TArray<FString> LevelNames;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	TArray<FString> LevelNamesToShow;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
 	TArray<int> DeathCountBounds;
@@ -146,17 +173,22 @@ protected:
 
 	int BeginEnemyCount;
 	int EnemiesKilled;
+	int FewEnemiesEventCount;
 	TSet<class ABase_NPC_SimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
 
 	float MusicRefreshTimer;
 
+	TArray<FScoreboardData> Scores;
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 	int GetCurMapIndex() const;
+
+	void ReadScoreboardData();
 
 	FTimerHandle NoticeSoundTurnOffTimerHandle;
 	void OnEndNoticeSoundTurnedOff();
@@ -203,13 +235,16 @@ public:
 	void OnAllEnemiesDead();
 
 	UFUNCTION(BlueprintCallable)
-	void AfterAllEnemiesDead();
-
-	UFUNCTION(BlueprintCallable)
 	void SaveLevelData();
 
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
+
+	UFUNCTION(BlueprintCallable)
+	void ReloadCurrentLevel();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadNextLevel();
 
 	UFUNCTION(BlueprintCallable)
 	void SetNoticeSoundTurnOff();
@@ -233,10 +268,23 @@ public:
 	float GetTargetMusicParameter();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	FString GetScoreboard(int Num) const;
+	FString GetScoreboard(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardEnumerate(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardLevels(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardScores(int Num);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FString GetScoreboardDiffs(int Num);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetDifficultyBrief() const;
+
 };
 
 template<typename T>
