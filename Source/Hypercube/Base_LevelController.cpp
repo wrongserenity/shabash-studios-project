@@ -11,7 +11,7 @@
 
 bool FScoreboardData::operator<(const FScoreboardData& Other) const
 {
-	return Score < Other.Score;
+	return Score > Other.Score;
 }
 
 ABase_LevelController::ABase_LevelController()
@@ -135,6 +135,23 @@ int ABase_LevelController::GetCurMapIndex() const
 		}
 	}
 	return -1;
+}
+
+void ABase_LevelController::ReadScoreboardData()
+{
+	if (Scores.Num())
+	{
+		return;
+	}
+	for (int i = 0; i < LevelData.Num(); ++i)
+	{
+		if (LevelData[i].Score > 0.0f)
+		{
+			FScoreboardData Data = { LevelData[i].Score, LevelData[i].DifficultyParameter, LevelData[i].LevelIndex };
+			Scores.Add(Data);
+		}
+	}
+	Scores.Sort();
 }
 
 void ABase_LevelController::LoadLevelData()
@@ -380,22 +397,13 @@ float ABase_LevelController::GetTargetMusicParameter()
 	return 1.0f;
 }
 
-FString ABase_LevelController::GetScoreboard(int Num) const
+FString ABase_LevelController::GetScoreboard(int Num)
 {
-	TArray<FScoreboardData> Scores;
-	for (int i = 0; i < LevelData.Num(); ++i)
-	{
-		if (LevelData[i].Score > 0.0f)
-		{
-			FScoreboardData Data = { LevelData[i].Score, LevelData[i].DifficultyParameter, LevelData[i].LevelIndex };
-			Scores.Add(Data);
-		}
-	}
+	ReadScoreboardData();
 	if (!Scores.Num())
 	{
 		return FString("");
 	}
-	Scores.Sort();
 	FString Result = "Scoreboard:\n\n      Level        Difficulty    Score\n";
 	Num = Num > Scores.Num() ? Scores.Num() : Num;
 	for (int i = 0; i < Num; ++i)
@@ -403,7 +411,7 @@ FString ABase_LevelController::GetScoreboard(int Num) const
 		FScoreboardData Data = Scores[Scores.Num() - 1 - i];
 		Result.AppendInt(i + 1);
 		Result += (i + 1 < 10) ? FString(".  ") : FString(". ");
-		FString LevelName = (Data.LevelIndex > 0 && Data.LevelIndex < LevelNamesToShow.Num()) ? LevelNamesToShow[Data.LevelIndex] : FString("????");
+		FString LevelName = (Data.LevelIndex >= 0 && Data.LevelIndex < LevelNamesToShow.Num()) ? LevelNamesToShow[Data.LevelIndex] : FString("????");
 		Result += LevelName;
 		for (int j = 0; j < 12 - LevelName.Len(); ++j)
 		{
@@ -417,6 +425,58 @@ FString ABase_LevelController::GetScoreboard(int Num) const
 			Result.AppendChar(' ');
 		}
 		Result.AppendInt(FMath::RoundToInt(Data.Score));
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardEnumerate(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result.AppendInt(i + 1);
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardLevels(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("Level\n\n");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result += (Scores[i].LevelIndex >= 0 && Scores[i].LevelIndex < LevelNamesToShow.Num()) ? LevelNamesToShow[Scores[i].LevelIndex] : FString("????");
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardScores(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("Score\n\n");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result.AppendInt(FMath::RoundToInt(Scores[i].Score));
+		Result.AppendChar('\n');
+	}
+	return Result;
+}
+
+FString ABase_LevelController::GetScoreboardDiffs(int Num)
+{
+	ReadScoreboardData();
+	int Count = Scores.Num() > Num ? Num : Scores.Num();
+	FString Result("Difficulty\n\n");
+	for (int i = 0; i < Count; ++i)
+	{
+		Result += FloatToFString(Scores[i].DifficultyParameter);
 		Result.AppendChar('\n');
 	}
 	return Result;
