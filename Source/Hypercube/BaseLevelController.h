@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BaseRunDataSave.h"
-#include "Containers/SortedMap.h"
 #include "BaseLevelController.generated.h"
 
 USTRUCT(BlueprintType)

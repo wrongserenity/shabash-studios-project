@@ -2,7 +2,6 @@
 #include "BaseNPCSimpleChase.h"
 #include "Components/CapsuleComponent.h"
 
-
 ABaseEnemySpawnPoint::ABaseEnemySpawnPoint()
 {
 	PrimaryActorTick.bCanEverTick = false;

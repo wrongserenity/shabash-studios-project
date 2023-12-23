@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "BaseNPCSimpleChase.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -15,10 +12,10 @@
 #include "NavMesh/RecastNavMesh.h"
 #include "NavigationSystem.h"
 
-// Sets default values
+// Base class for enemy NPC
+
 ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 {
-	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	DelayedInitTime = 0.1f;
 
@@ -81,20 +78,8 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	DebugDamageIndicatorTime = 3.0f;
 
 	bIsDebugOn = false;
-
-	//SlowDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Slow Debuff Effect"));
-	//SlowDebuffEffectWidget->SetupAttachment(RootComponent);
-	//SlowDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	//SlowDebuffEffectWidget->SetVisibility(false);
-
-
-	//DamageDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Damage Debuff Effect"));
-	//DamageDebuffEffectWidget->SetupAttachment(RootComponent);
-	//DamageDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	//DamageDebuffEffectWidget->SetVisibility(false);
 }
 
-// Called when the game starts or when spawned
 void ABaseNPCSimpleChase::BeginPlay()
 {
 	GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &ABaseNPCSimpleChase::DelayedInit, DelayedInitTime, false);
@@ -204,21 +189,21 @@ void ABaseNPCSimpleChase::OnEndDebugDamageIndicatorTimer()
 	DebugDamageIndicator->SetVisibility(false);
 }
 
-void ABaseNPCSimpleChase::SetAttackCollision(bool Active)
+void ABaseNPCSimpleChase::SetAttackCollision(bool bToActivate)
 {
 	if (bIsDebugOn)
 	{
-		AttackCollision->SetVisibility(Active);
+		AttackCollision->SetVisibility(bToActivate);
 	}
-	AttackCollision->SetActive(Active);
+	AttackCollision->SetActive(bToActivate);
 }
 
-void ABaseNPCSimpleChase::SetDebugAttackCollision(bool Active)
+void ABaseNPCSimpleChase::SetDebugAttackCollision(bool bToActivate)
 {
 	if (bIsDebugOn)
 	{
-		DebugAttackCollision->SetVisibility(Active);
-		DebugAttackCollision->SetActive(Active);
+		DebugAttackCollision->SetVisibility(bToActivate);
+		DebugAttackCollision->SetActive(bToActivate);
 	}
 }
 
@@ -312,16 +297,6 @@ void ABaseNPCSimpleChase::PlayDeath()
 	EnemyDeathDelegate.Broadcast();
 }
 
-class ABaseLevelController* ABaseNPCSimpleChase::GetLevelController() const
-{
-	return LevelController;
-}
-
-class USphereComponent* ABaseNPCSimpleChase::GetNoticeCollision() const
-{
-	return NoticeCollision;
-}
-
 void ABaseNPCSimpleChase::SetSlowDebuff(float Mult, float Time)
 {
 	if (GetWorld()->GetTimerManager().IsTimerActive(SlowDebuffTimerHandle))
@@ -334,8 +309,6 @@ void ABaseNPCSimpleChase::SetSlowDebuff(float Mult, float Time)
 
 		MoveComp->MaxWalkSpeed *= Mult;
 
-		//SlowDebuffEffectWidget->SetVisibility(true);
-
 		EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuff, true);
 	}
 	GetWorld()->GetTimerManager().SetTimer(SlowDebuffTimerHandle, this, &ABaseNPCSimpleChase::OnEndSlowDebuff, Time, false);
@@ -344,7 +317,6 @@ void ABaseNPCSimpleChase::SetSlowDebuff(float Mult, float Time)
 void ABaseNPCSimpleChase::OnEndSlowDebuff()
 {
 	MoveComp->MaxWalkSpeed = BaseSpeed;
-	//SlowDebuffEffectWidget->SetVisibility(false);
 	EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuffEnd, true);
 }
 
@@ -360,8 +332,6 @@ void ABaseNPCSimpleChase::SetDamageDebuff(float Mult, float Time)
 
 		SimpleAttack.Damage *= Mult;
 
-		//DamageDebuffEffectWidget->SetVisibility(true);
-
 		EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuff, true);
 	}
 	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABaseNPCSimpleChase::OnEndDamageDebuff, Time, false);
@@ -370,7 +340,6 @@ void ABaseNPCSimpleChase::SetDamageDebuff(float Mult, float Time)
 void ABaseNPCSimpleChase::OnEndDamageDebuff()
 {
 	SimpleAttack.Damage = BaseDamage;
-	//DamageDebuffEffectWidget->SetVisibility(false);
 	EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuffEnd, true);
 }
 
@@ -386,7 +355,7 @@ bool ABaseNPCSimpleChase::PlayerHasSightOn() const
 		return false;
 	}
 	const FVector2D ViewportSize = FVector2D(GEngine->GameViewport->Viewport->GetSizeXY());
-	return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X&& ScreenLocation.Y < ViewportSize.Y;
+	return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X && ScreenLocation.Y < ViewportSize.Y;
 }
 
 void ABaseNPCSimpleChase::Unstuck()

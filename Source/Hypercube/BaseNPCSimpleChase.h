@@ -4,6 +4,8 @@
 #include "GameFramework/Character.h"
 #include "BaseNPCSimpleChase.generated.h"
 
+// Base class for enemy NPC
+
 USTRUCT(BlueprintType)
 struct FAttackStats
 {
@@ -21,9 +23,11 @@ struct FAttackStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AfterAttackTime;
 
+	// Speed with which enemy are rotating towards the player while attacking
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackRotationMultiplier;
 
+	// Speed with which enemy are going forward during active frames of attack
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackMoveForwardSpeed;
 
@@ -87,14 +91,9 @@ class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* DebugAttackCollision;
 
+	// Some mesh appearing above character when damaged
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* DebugDamageIndicator;
-
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	//class UWidgetComponent* SlowDebuffEffectWidget;
-
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	//class UWidgetComponent* DamageDebuffEffectWidget;
 
 public:
 
@@ -118,32 +117,39 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Jump")
 	float JumpTime;
 
+	// Radius of visibility
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroRadius;
 
+	// Time between aggro and start of chasing
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
 
+	// Number of seconds between checks of player sight on enemy when enemy is stuck
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	float UnstuckPlayerSightUpdate;
 
+	// Radius around player in which stuck enemies will be teleported
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	float UnstuckAroundPlayerRadius;
 
+	// Maximum number of attemps to unstuck during one iteration
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	int MaxAttempsToUnstuck;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bIsDebugOn;
 
+	// Time for which debug damage indicator becames visible
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	float DebugDamageIndicatorTime;
 
 protected:
 
+	// Semaphore that controls Tick() usage
 	uint8 TickSemaphore;
 
 	FTimerHandle NoticeTimerHandle;
@@ -153,11 +159,15 @@ protected:
 	EAttackPhase AttackPhase;
 	class AHypercubeCharacter* AttackTarget;
 
+	// Dealayed initialization
 	FTimerHandle DelayedInitTimerHandle;
 	float DelayedInitTime;
 	void DelayedInit();
 
+	// Pass true when Tick() is needed (increment the semaphore), false when it becames unnecessary (decrement the semaphore)
 	void SetTickState(bool bToActivate);
+
+	// Force disable of ticking and setting TickSemaphore = 0
 	void ForceTickDisable();
 
 	virtual void BeginPlay() override;
@@ -166,6 +176,11 @@ protected:
 	void TickRotateToTarget(float DeltaSeconds);
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
+
+	void AfterNotice();
+	
+	void SetAttackCollision(bool bToActivate);
+	void SetDebugAttackCollision(bool bToActivate);
 
 	FTimerHandle DebugDamageIndicatorTimerHandle;
 	void ActivateDebugDamageIndicator();
@@ -186,11 +201,11 @@ protected:
 
 public:
 
-	UFUNCTION(BlueprintCallable)
-	void SetAttackCollision(bool Active);
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE class ABaseLevelController* GetLevelController() const { return LevelController; }
 
-	UFUNCTION(BlueprintCallable)
-	void SetDebugAttackCollision(bool Active);
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE class USphereComponent* GetNoticeCollision() const { return NoticeCollision; }
 
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
@@ -198,23 +213,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnNotice();
 
-	UFUNCTION(BlueprintCallable)
-	void AfterNotice();
-
+	// Execute simple attack
 	UFUNCTION(BlueprintCallable)
 	void Attack();
 
 	UFUNCTION(BlueprintCallable)
 	void JumpTo(FVector Destination);
 
+	// Called when health drops below zero
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class ABaseLevelController* GetLevelController() const;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class USphereComponent* GetNoticeCollision() const;
 
 	UFUNCTION(BlueprintCallable)
 	void SetSlowDebuff(float Mult, float Time);
@@ -222,9 +230,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetDamageDebuff(float Mult, float Time);
 
+	// True if player camera has sight on this NPC
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool PlayerHasSightOn() const;
 
+	// Called when NPC is stuck and player is not seeing it. Teleports NPC near plauyer out of his sight
 	UFUNCTION(BlueprintCallable)
 	void Unstuck();
 };

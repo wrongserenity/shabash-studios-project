@@ -17,8 +17,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Components/WidgetComponent.h"
 
-//////////////////////////////////////////////////////////////////////////
-// AHypercubeCharacter
+// Base class for player Character
 
 AHypercubeCharacter::AHypercubeCharacter()
 {
@@ -81,7 +80,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	bDamageMultiplierStays = false;
 	bDamageMultiplierFalling = false;
 
-	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 90.0f, 68.0f };
+	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 90.0f, 68.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
@@ -295,11 +294,9 @@ void AHypercubeCharacter::MoveRight(float Value)
 	}
 }
 
-float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x))dx = 1
+inline float AHypercubeCharacter::DashVelocityCurve(float x)
 {
 	return (x >= 0.0f && x <= 1.0f) ? (PI / 2.0f) * FMath::Sin(PI * x) : 0.0f;
-	//return (x < 0.5f ? 4.0f * x : 4.0f - 4.0f * x);
-	//return 1.0;
 }
 
 inline float AHypercubeCharacter::DamageFXCurve(float x)
@@ -323,7 +320,6 @@ void AHypercubeCharacter::Dash()
 {
 	if (!bCanDash || MovementPhase != EPlayerMovementPhase::Walking)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
 	}
 	PlayerActionDelegate.Broadcast(EPlayerAction::Dash);
@@ -349,14 +345,6 @@ void AHypercubeCharacter::Dash()
 	bCanDash = false;
 	
 	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-
-	//TSet<AActor*> collisions;
-	//GetCapsuleComponent()->GetOverlappingActors(collisions);
-	//UE_LOG(LogTemp, Warning, TEXT("%d"), collisions.Num());
-	//for (auto it = collisions.begin(); it != collisions.end(); ++it)
-	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("%s"), *(*it)->GetName());
-	//}
 }
 
 void AHypercubeCharacter::AllowMovingWhileDash()
@@ -371,13 +359,11 @@ void AHypercubeCharacter::StopDashing()
 	MovementPhase = EPlayerMovementPhase::Walking;
 	bIsDashMovementBlocked = true;
 	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
-	//UE_LOG(LogTemp, Warning, TEXT("End of dash"));
 	DashCooldownTimer = 0.0f;
 }
 
 void AHypercubeCharacter::OnEndDashCooldown()
 {
-	//UE_LOG(LogTemp, Warning, TEXT("End of dash cooldown"));
 	bCanDash = true;
 }
 
@@ -477,7 +463,6 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		ActivateDebugDamageIndicator();
 	}
 	bIsInvincible = true;
-	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
 	DamageFXTimer = DamageFXTime;
 	PlayerActionDelegate.Broadcast(EPlayerAction::Damaged);
 	if (Health <= 0.0f)
@@ -576,11 +561,6 @@ void AHypercubeCharacter::Pause()
 	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
 	SetMouseCursorShow(bIsGamePaused);
 	PauseDelegate.Broadcast(bIsGamePaused);
-}
-
-ABaseLevelController* AHypercubeCharacter::GetLevelController() const
-{
-	return LevelController;
 }
 
 int AHypercubeCharacter::GetEnemyChasingCount() const
