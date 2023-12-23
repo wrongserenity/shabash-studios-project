@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Base_RunDataSave.h"
+#include "BaseRunDataSave.h"
 #include "Containers/SortedMap.h"
-#include "Base_LevelController.generated.h"
+#include "BaseLevelController.generated.h"
 
 USTRUCT(BlueprintType)
 struct FScoreboardData
@@ -29,10 +29,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFewEnemiesRemaining);
 
 UCLASS()
-class HYPERCUBE_API ABase_LevelController : public AActor
+class HYPERCUBE_API ABaseLevelController : public AActor
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* Root;
 
@@ -45,9 +45,9 @@ class HYPERCUBE_API ABase_LevelController : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UAudioComponent* MusicComp_High;
 
-public:	
+public:
 	// Sets default values for this actor's properties
-	ABase_LevelController();
+	ABaseLevelController();
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAllEnemiesDead AllEnemiesDeadDelegate;
@@ -168,13 +168,13 @@ protected:
 	int CurLevelIndex;
 
 	class AHypercubeCharacter* Player;
-	
+
 	TArray<class AActor*> SpawnPoints;
 
 	int BeginEnemyCount;
 	int EnemiesKilled;
 	int FewEnemiesEventCount;
-	TSet<class ABase_NPC_SimpleChase*> Enemies;
+	TSet<class ABaseNPCSimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
 
@@ -199,7 +199,7 @@ protected:
 	FTimerHandle DeathSoundTurnOffTimerHandle;
 	void OnEndDeathSoundTurnedOff();
 
-public:	
+public:
 
 	UFUNCTION(BlueprintCallable)
 	void LoadLevelData();
@@ -208,19 +208,19 @@ public:
 	void SpawnEnemies();
 
 	UFUNCTION(BlueprintCallable)
-	void SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint);
+	void SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint);
 
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter);
 
 	UFUNCTION(BlueprintCallable)
-	void AddEnemy(class ABase_NPC_SimpleChase* EnemyCharacter);
+	void AddEnemy(class ABaseNPCSimpleChase* EnemyCharacter);
 
 	UFUNCTION(BlueprintCallable)
 	void AddEnemiesKilled();
 
 	UFUNCTION(BlueprintCallable)
-	void RemoveEnemy(class ABase_NPC_SimpleChase* Enemy);
+	void RemoveEnemy(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateMaxMultiplicator(float NewMultiplicator);
@@ -262,7 +262,7 @@ public:
 	void SetPlayerParams();
 
 	UFUNCTION(BlueprintCallable)
-	void SetEnemyParams(class ABase_NPC_SimpleChase* Enemy);
+	void SetEnemyParams(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
 	float GetTargetMusicParameter();

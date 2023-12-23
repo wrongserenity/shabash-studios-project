@@ -98,7 +98,7 @@ public:
 	AHypercubeCharacter();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class ABase_LevelController* LevelController;
+	class ABaseLevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnPlayerAction PlayerActionDelegate;
@@ -212,9 +212,9 @@ protected:
 
 	FTimerHandle AttackTimerHandle;
 
-	TSet<class ABase_NPC_SimpleChase*> AttackEnemiesCollided;
+	TSet<class ABaseNPCSimpleChase*> AttackEnemiesCollided;
 
-	TSet<class ABase_NPC_SimpleChase*> EnemyChasing;
+	TSet<class ABaseNPCSimpleChase*> EnemyChasing;
 
 	float DamageFXTimer;
 
@@ -279,10 +279,10 @@ public:
 	void OnEndDamageMultiplierStays();
 
 	UFUNCTION(BlueprintCallable)
-	void OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy);
+	void OnEnemyAggro(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
-	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
+	void OnEnemyDeath(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
 	void SetMouseCursorShow(bool Activate);
@@ -291,7 +291,7 @@ public:
 	void Pause();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class ABase_LevelController* GetLevelController() const;
+	class ABaseLevelController* GetLevelController() const;
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveAttackInput();

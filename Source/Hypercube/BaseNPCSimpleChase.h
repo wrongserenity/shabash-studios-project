@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Base_NPC_SimpleChase.generated.h"
+#include "BaseNPCSimpleChase.generated.h"
 
 USTRUCT(BlueprintType)
 struct FAttackStats
@@ -37,7 +37,7 @@ struct FAttackStats
 UENUM(BlueprintType)
 enum class EAttackPhase : uint8
 {
-	NotAttacking UMETA(DisplayName="NotAttacking"),
+	NotAttacking UMETA(DisplayName = "NotAttacking"),
 	Opener UMETA(DisplayName = "Opener"),
 	Attacking UMETA(DisplayName = "Attacking"),
 	AfterAttack UMETA(DisplayName = "AfterAttack")
@@ -68,7 +68,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyAction, EEnemyAction, Action, bool, Success);
 
 UCLASS()
-class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
+class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -98,10 +98,10 @@ class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
 
 public:
 
-	ABase_NPC_SimpleChase();
+	ABaseNPCSimpleChase();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = LevelController)
-	class ABase_LevelController* LevelController;
+	class ABaseLevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnEnemyDeath EnemyDeathDelegate;
@@ -184,7 +184,7 @@ protected:
 
 	FTimerHandle CheckPlayerSightTimerHandle;
 
-public:	
+public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetAttackCollision(bool Active);
@@ -211,7 +211,7 @@ public:
 	void PlayDeath();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class ABase_LevelController* GetLevelController() const;
+	class ABaseLevelController* GetLevelController() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	class USphereComponent* GetNoticeCollision() const;

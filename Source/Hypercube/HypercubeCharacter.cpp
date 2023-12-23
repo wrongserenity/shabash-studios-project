@@ -10,9 +10,9 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Math/UnrealMathUtility.h"
 #include "Components/BoxComponent.h"
-#include "Base_NPC_SimpleChase.h"
+#include "BaseNPCSimpleChase.h"
 #include "Components/StaticMeshComponent.h"
-#include "Base_LevelController.h"
+#include "BaseLevelController.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/WidgetComponent.h"
@@ -132,10 +132,10 @@ AHypercubeCharacter::AHypercubeCharacter()
 void AHypercubeCharacter::BeginPlay()
 {
 	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseLevelController::StaticClass(), FoundActors);
 	if (FoundActors.Num())
 	{
-		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+		LevelController = Cast<ABaseLevelController>(FoundActors[0]);
 		LevelController->SetPlayerCharacter(this);
 	}
 	else
@@ -150,10 +150,10 @@ void AHypercubeCharacter::BeginPlay()
 //void AHypercubeCharacter::DelayedInit()
 //{
 //	TArray<AActor*> FoundActors;
-//	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+//	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseLevelController::StaticClass(), FoundActors);
 //	if (FoundActors.Num())
 //	{
-//		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+//		LevelController = Cast<ABaseLevelController>(FoundActors[0]);
 //		LevelController->SetPlayerCharacter(this);
 //	}
 //	else
@@ -252,10 +252,10 @@ void AHypercubeCharacter::DashTick(float DeltaSeconds)
 void AHypercubeCharacter::AttackTick()
 {
 	TSet<AActor*> collisions;
-	AttackCollision->GetOverlappingActors(collisions, ABase_NPC_SimpleChase::StaticClass());
+	AttackCollision->GetOverlappingActors(collisions, ABaseNPCSimpleChase::StaticClass());
 	for (auto it = collisions.begin(); it != collisions.end(); ++it)
 	{
-		ABase_NPC_SimpleChase* tmp = Cast<ABase_NPC_SimpleChase>(*it);
+		ABaseNPCSimpleChase* tmp = Cast<ABaseNPCSimpleChase>(*it);
 		if (tmp && !AttackEnemiesCollided.Contains(tmp))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
@@ -525,7 +525,7 @@ void AHypercubeCharacter::OnEndDamageMultiplierStays()
 	bDamageMultiplierFalling = true;
 }
 
-void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
+void AHypercubeCharacter::OnEnemyAggro(class ABaseNPCSimpleChase* Enemy)
 {
 	if (!EnemyChasing.Contains(Enemy))
 	{
@@ -534,7 +534,7 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 	}
 }
 
-void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
+void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
 {
 	Score += BaseScoreForEnemy * DamageMultiplier;
 	Health += Vampirism * Enemy->MaxHealth;
@@ -574,7 +574,7 @@ void AHypercubeCharacter::Pause()
 	PauseDelegate.Broadcast(bIsGamePaused);
 }
 
-ABase_LevelController* AHypercubeCharacter::GetLevelController() const
+ABaseLevelController* AHypercubeCharacter::GetLevelController() const
 {
 	return LevelController;
 }

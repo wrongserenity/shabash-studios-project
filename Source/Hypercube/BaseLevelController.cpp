@@ -1,8 +1,8 @@
-#include "Base_LevelController.h"
+#include "BaseLevelController.h"
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
-#include "Base_NPC_SimpleChase.h"
-#include "Base_EnemySpawnPoint.h"
+#include "BaseNPCSimpleChase.h"
+#include "BaseEnemySpawnPoint.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Math/UnrealMathUtility.h"
 #include "Components/SphereComponent.h"
@@ -14,7 +14,7 @@ bool FScoreboardData::operator<(const FScoreboardData& Other) const
 	return Score > Other.Score;
 }
 
-ABase_LevelController::ABase_LevelController()
+ABaseLevelController::ABaseLevelController()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -82,7 +82,7 @@ ABase_LevelController::ABase_LevelController()
 	MusicRefreshTimer = 0.0f;
 }
 
-void ABase_LevelController::BeginPlay()
+void ABaseLevelController::BeginPlay()
 {
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *(GetWorld()->GetMapName()));
 	CurLevelIndex = GetCurMapIndex();
@@ -102,7 +102,7 @@ void ABase_LevelController::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ABase_LevelController::Tick(float DeltaSeconds)
+void ABaseLevelController::Tick(float DeltaSeconds)
 {
 	MusicRefreshTimer += DeltaSeconds;
 	if (MusicRefreshTimer >= MusicRefreshFrequency)
@@ -123,7 +123,7 @@ void ABase_LevelController::Tick(float DeltaSeconds)
 	}
 }
 
-int ABase_LevelController::GetCurMapIndex() const
+int ABaseLevelController::GetCurMapIndex() const
 {
 	const FString CurMapName = GetWorld()->GetMapName();
 	const FString Prefix = "UEDPIE_0_";
@@ -137,7 +137,7 @@ int ABase_LevelController::GetCurMapIndex() const
 	return -1;
 }
 
-void ABase_LevelController::ReadScoreboardData()
+void ABaseLevelController::ReadScoreboardData()
 {
 	if (Scores.Num())
 	{
@@ -154,9 +154,9 @@ void ABase_LevelController::ReadScoreboardData()
 	Scores.Sort();
 }
 
-void ABase_LevelController::LoadLevelData()
+void ABaseLevelController::LoadLevelData()
 {
-	UBase_RunDataSave* LoadedData = Cast<UBase_RunDataSave>(UGameplayStatics::LoadGameFromSlot(SaveSlotName, 0));
+	UBaseRunDataSave* LoadedData = Cast<UBaseRunDataSave>(UGameplayStatics::LoadGameFromSlot(SaveSlotName, 0));
 	if (LoadedData)
 	{
 		LevelData = LoadedData->LevelDataArr;
@@ -172,9 +172,9 @@ void ABase_LevelController::LoadLevelData()
 	}
 }
 
-void ABase_LevelController::SpawnEnemies()
+void ABaseLevelController::SpawnEnemies()
 {
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_EnemySpawnPoint::StaticClass(), SpawnPoints);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseEnemySpawnPoint::StaticClass(), SpawnPoints);
 	for (int i = 0; i < SpawnPoints.Num(); ++i)
 	{
 		SpawnPoints.Swap(i, FMath::RandRange(i, SpawnPoints.Num() - 1));
@@ -188,7 +188,7 @@ void ABase_LevelController::SpawnEnemies()
 	UE_LOG(LogTemp, Warning, TEXT("Few enemies event: %d"), FewEnemiesEventCount);
 	for (int i = 0; i < BeginEnemyCount; ++i)
 	{
-		ABase_EnemySpawnPoint* SpawnPoint = Cast<ABase_EnemySpawnPoint>(SpawnPoints[i]);
+		ABaseEnemySpawnPoint* SpawnPoint = Cast<ABaseEnemySpawnPoint>(SpawnPoints[i]);
 		if (SpawnPoint)
 		{
 			SpawnEnemy(SpawnPoint);
@@ -196,9 +196,9 @@ void ABase_LevelController::SpawnEnemies()
 	}
 }
 
-void ABase_LevelController::SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint)
+void ABaseLevelController::SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint)
 {
-	ABase_NPC_SimpleChase* Enemy = SpawnPoint->SpawnEnemy();
+	ABaseNPCSimpleChase* Enemy = SpawnPoint->SpawnEnemy();
 	if (Enemy)
 	{
 		Enemy->LevelController = this;
@@ -207,17 +207,17 @@ void ABase_LevelController::SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint)
 	}
 }
 
-void ABase_LevelController::AddEnemiesKilled()
+void ABaseLevelController::AddEnemiesKilled()
 {
 	++EnemiesKilled;
 }
 
-void ABase_LevelController::AddEnemy(class ABase_NPC_SimpleChase* Enemy)
+void ABaseLevelController::AddEnemy(class ABaseNPCSimpleChase* Enemy)
 {
 	Enemies.Add(Enemy);
 }
 
-void ABase_LevelController::RemoveEnemy(class ABase_NPC_SimpleChase* Enemy)
+void ABaseLevelController::RemoveEnemy(class ABaseNPCSimpleChase* Enemy)
 {
 	if (Enemies.Contains(Enemy))
 	{
@@ -235,7 +235,7 @@ void ABase_LevelController::RemoveEnemy(class ABase_NPC_SimpleChase* Enemy)
 	}
 }
 
-void ABase_LevelController::UpdateMaxMultiplicator(float NewMultiplicator)
+void ABaseLevelController::UpdateMaxMultiplicator(float NewMultiplicator)
 {
 	if (NewMultiplicator > CurLevelData.MaxMultiplicator)
 	{
@@ -243,33 +243,33 @@ void ABase_LevelController::UpdateMaxMultiplicator(float NewMultiplicator)
 	}
 }
 
-void ABase_LevelController::SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter)
+void ABaseLevelController::SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter)
 {
 	Player = PlayerCharacter;
 	SetPlayerParams();
 }
 
-void ABase_LevelController::OnPlayerDeath()
+void ABaseLevelController::OnPlayerDeath()
 {
 	CurLevelData.PlayerWon = false;
 	TargetMusicParameter = 0.0f;
 	SaveLevelData();
-	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABase_LevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
+	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABaseLevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
 }
 
-void ABase_LevelController::AfterPlayerDeath()
+void ABaseLevelController::AfterPlayerDeath()
 {
 	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[CurLevelIndex < 0 ? 0 : CurLevelIndex]));
 }
 
-void ABase_LevelController::OnAllEnemiesDead()
+void ABaseLevelController::OnAllEnemiesDead()
 {
 	CurLevelData.PlayerWon = true;
 	SaveLevelData();
 	AllEnemiesDeadDelegate.Broadcast();
 }
 
-void ABase_LevelController::SaveLevelData()
+void ABaseLevelController::SaveLevelData()
 {
 	CurLevelData.Score = Player->Score;
 	CurLevelData.EnemiesPercentageKilled = float(EnemiesKilled) / float(BeginEnemyCount);
@@ -280,7 +280,7 @@ void ABase_LevelController::SaveLevelData()
 	CurLevelData.DifficultyParameter = DifficultyParameter;
 	CurLevelData.LevelIndex = CurLevelIndex;
 	LevelData.Add(CurLevelData);
-	UBase_RunDataSave* SaveGameInstance = Cast<UBase_RunDataSave>(UGameplayStatics::CreateSaveGameObject(UBase_RunDataSave::StaticClass()));
+	UBaseRunDataSave* SaveGameInstance = Cast<UBaseRunDataSave>(UGameplayStatics::CreateSaveGameObject(UBaseRunDataSave::StaticClass()));
 	if (SaveGameInstance)
 	{
 		SaveGameInstance->LevelDataArr = LevelData;
@@ -288,55 +288,55 @@ void ABase_LevelController::SaveLevelData()
 	}
 }
 
-void ABase_LevelController::ClearLevelData()
+void ABaseLevelController::ClearLevelData()
 {
 	LevelData.Empty();
 }
 
-void ABase_LevelController::ReloadCurrentLevel()
+void ABaseLevelController::ReloadCurrentLevel()
 {
 	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[CurLevelIndex < 0 ? 0 : CurLevelIndex]));
 }
 
-void ABase_LevelController::LoadNextLevel()
+void ABaseLevelController::LoadNextLevel()
 {
 	UGameplayStatics::OpenLevel(GetWorld(), FName(*LevelNames[(CurLevelIndex + 1) % LevelNames.Num()]));
 }
 
-void ABase_LevelController::SetNoticeSoundTurnOff()
+void ABaseLevelController::SetNoticeSoundTurnOff()
 {
 	bEnemyCanNoticeSound = false;
-	GetWorld()->GetTimerManager().SetTimer(NoticeSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndNoticeSoundTurnedOff, NoticeSoundTurnOffTime, false);
+	GetWorld()->GetTimerManager().SetTimer(NoticeSoundTurnOffTimerHandle, this, &ABaseLevelController::OnEndNoticeSoundTurnedOff, NoticeSoundTurnOffTime, false);
 }
 
-void ABase_LevelController::OnEndNoticeSoundTurnedOff()
+void ABaseLevelController::OnEndNoticeSoundTurnedOff()
 {
 	bEnemyCanNoticeSound = true;
 }
 
-void ABase_LevelController::SetFootstepSoundTurnOff()
+void ABaseLevelController::SetFootstepSoundTurnOff()
 {
 	bEnemyCanFootstepSound = false;
-	GetWorld()->GetTimerManager().SetTimer(FootstepSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndFootstepSoundTurnedOff, FootstepSoundTurnOffTime, false);
+	GetWorld()->GetTimerManager().SetTimer(FootstepSoundTurnOffTimerHandle, this, &ABaseLevelController::OnEndFootstepSoundTurnedOff, FootstepSoundTurnOffTime, false);
 }
 
-void ABase_LevelController::OnEndFootstepSoundTurnedOff()
+void ABaseLevelController::OnEndFootstepSoundTurnedOff()
 {
 	bEnemyCanFootstepSound = true;
 }
 
-void ABase_LevelController::SetDeathSoundTurnOff()
+void ABaseLevelController::SetDeathSoundTurnOff()
 {
 	bEnemyCanDeathSound = false;
-	GetWorld()->GetTimerManager().SetTimer(DeathSoundTurnOffTimerHandle, this, &ABase_LevelController::OnEndDeathSoundTurnedOff, DeathSoundTurnOffTime, false);
+	GetWorld()->GetTimerManager().SetTimer(DeathSoundTurnOffTimerHandle, this, &ABaseLevelController::OnEndDeathSoundTurnedOff, DeathSoundTurnOffTime, false);
 }
 
-void ABase_LevelController::OnEndDeathSoundTurnedOff()
+void ABaseLevelController::OnEndDeathSoundTurnedOff()
 {
 	bEnemyCanDeathSound = true;
 }
 
-float ABase_LevelController::GetDifficultyParameter()
+float ABaseLevelController::GetDifficultyParameter()
 {
 	if (!FMath::IsNearlyEqual(DeathCountCost + OnDeathEnemyAggroCost + PlayTimeCost, 1.0f))
 	{
@@ -365,21 +365,21 @@ float ABase_LevelController::GetDifficultyParameter()
 	return DeathCountParameter + OnDeathChasingParameter + PlayTimeParameter;
 }
 
-void ABase_LevelController::SetPlayerParams()
+void ABaseLevelController::SetPlayerParams()
 {
 	Player->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVelocityValues);
 	Player->DamageMultiplierEnemyCost *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerDamageMultiplerValues);
 	Player->Vampirism = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVampirismValues);
 }
 
-void ABase_LevelController::SetEnemyParams(class ABase_NPC_SimpleChase* Enemy)
+void ABaseLevelController::SetEnemyParams(class ABaseNPCSimpleChase* Enemy)
 {
 	Enemy->GetCharacterMovement()->MaxWalkSpeed *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyVelocityValues);
 	Enemy->SimpleAttack.Damage *= GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyDamageValues);
 	Enemy->GetNoticeCollision()->SetSphereRadius(Enemy->AggroRadius * GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
 }
 
-float ABase_LevelController::GetTargetMusicParameter()
+float ABaseLevelController::GetTargetMusicParameter()
 {
 	if (Player->Health <= 0.0f)
 	{
@@ -397,7 +397,7 @@ float ABase_LevelController::GetTargetMusicParameter()
 	return 1.0f;
 }
 
-FString ABase_LevelController::GetScoreboard(int Num)
+FString ABaseLevelController::GetScoreboard(int Num)
 {
 	ReadScoreboardData();
 	if (!Scores.Num())
@@ -430,7 +430,7 @@ FString ABase_LevelController::GetScoreboard(int Num)
 	return Result;
 }
 
-FString ABase_LevelController::GetScoreboardEnumerate(int Num)
+FString ABaseLevelController::GetScoreboardEnumerate(int Num)
 {
 	ReadScoreboardData();
 	int Count = Scores.Num() > Num ? Num : Scores.Num();
@@ -443,7 +443,7 @@ FString ABase_LevelController::GetScoreboardEnumerate(int Num)
 	return Result;
 }
 
-FString ABase_LevelController::GetScoreboardLevels(int Num)
+FString ABaseLevelController::GetScoreboardLevels(int Num)
 {
 	ReadScoreboardData();
 	int Count = Scores.Num() > Num ? Num : Scores.Num();
@@ -456,7 +456,7 @@ FString ABase_LevelController::GetScoreboardLevels(int Num)
 	return Result;
 }
 
-FString ABase_LevelController::GetScoreboardScores(int Num)
+FString ABaseLevelController::GetScoreboardScores(int Num)
 {
 	ReadScoreboardData();
 	int Count = Scores.Num() > Num ? Num : Scores.Num();
@@ -469,7 +469,7 @@ FString ABase_LevelController::GetScoreboardScores(int Num)
 	return Result;
 }
 
-FString ABase_LevelController::GetScoreboardDiffs(int Num)
+FString ABaseLevelController::GetScoreboardDiffs(int Num)
 {
 	ReadScoreboardData();
 	int Count = Scores.Num() > Num ? Num : Scores.Num();
@@ -482,7 +482,7 @@ FString ABase_LevelController::GetScoreboardDiffs(int Num)
 	return Result;
 }
 
-FString ABase_LevelController::GetDifficultyBrief() const
+FString ABaseLevelController::GetDifficultyBrief() const
 {
 	FString Result = "Difficulty parameter: " + FloatToFString(DifficultyParameter);
 	Result += FString("\n\n\nPlayer stats:\n\nSpeed: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, PlayerVelocityValues));

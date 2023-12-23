@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
-#include "Base_RunDataSave.generated.h"
+#include "BaseRunDataSave.generated.h"
 
 USTRUCT(BlueprintType)
 struct FLevelData
@@ -45,7 +45,7 @@ struct FLevelData
 };
 
 UCLASS()
-class HYPERCUBE_API UBase_RunDataSave : public USaveGame
+class HYPERCUBE_API UBaseRunDataSave : public USaveGame
 {
 	GENERATED_BODY()
 

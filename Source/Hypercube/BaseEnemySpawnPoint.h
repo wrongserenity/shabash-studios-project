@@ -4,16 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Base_EnemySpawnPoint.generated.h"
+#include "BaseEnemySpawnPoint.generated.h"
 
 UCLASS()
-class HYPERCUBE_API ABase_EnemySpawnPoint : public AActor
+class HYPERCUBE_API ABaseEnemySpawnPoint : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
-	ABase_EnemySpawnPoint();
+	ABaseEnemySpawnPoint();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = EnemyParameters)
 	class UClass* EnemyClass;
@@ -22,6 +22,6 @@ public:
 	float EnemySpawnHeight;
 
 	UFUNCTION(BlueprintCallable)
-	class ABase_NPC_SimpleChase* SpawnEnemy() const;
+	class ABaseNPCSimpleChase* SpawnEnemy() const;
 
 };
