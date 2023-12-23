@@ -83,10 +83,10 @@ class AHypercubeCharacter : public ACharacter
 	class UBoxComponent* AttackCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* Debug_AttackCollision;
+	class UBoxComponent* DebugAttackCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* Debug_DamageIndicator;
+	class UStaticMeshComponent* DebugDamageIndicator;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class APlayerController* PlayerController;
@@ -166,10 +166,10 @@ public:
 	FPlayerAttackStats SimpleAttack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDebug;
+	bool bIsDebugOn;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	float Debug_DamageIndicatorTime;
+	float DebugDamageIndicatorTime;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsGamePaused;
@@ -182,6 +182,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float CameraFovChangeSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float SpeedBuffCameraFovMultiplicator;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	float DashBarPercentage;
@@ -198,7 +201,7 @@ protected:
 	class UInputComponent* InputComp;
 
 	bool bCanDash;
-	bool bDashMovementBlocked;
+	bool bIsDashMovementBlocked;
 	FVector DashDestination;
 	float DashTimer;
 	float DashCooldownTimer;
@@ -218,7 +221,7 @@ protected:
 
 	float DamageFXTimer;
 
-	FTimerHandle Debug_DamageIndicatorTimerHandle;
+	FTimerHandle DebugDamageIndicatorTimerHandle;
 
 	float BaseSpeed;
 	float BaseJumpVelocity;
@@ -235,16 +238,16 @@ protected:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
-	inline float DashVelocityCurve(float x); // f(x) where int_0^1(f(x))dx = 1
-	inline float DamageFXCurve(float x);
+	static inline float DashVelocityCurve(float x); // f(x) where int_0^1(f(x))dx = 1
+	static inline float DamageFXCurve(float x);
 
 	void Dash();
 	void AllowMovingWhileDash();
 	void StopDashing();
 	void OnEndDashCooldown();
 
-	void SetAttackCollision(bool Activate);
-	void SetDebugAttackCollision(bool Activate);
+	void SetAttackCollision(bool bToActivate);
+	void SetDebugAttackCollision(bool bToActivate);
 	void Attack();
 	void OnEndAttack();
 
@@ -285,7 +288,7 @@ public:
 	void OnEnemyDeath(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
-	void SetMouseCursorShow(bool Activate);
+	void SetMouseCursorShow(bool bToShow);
 
 	UFUNCTION(BlueprintCallable)
 	void Pause();

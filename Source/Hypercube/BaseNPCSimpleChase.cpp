@@ -54,14 +54,14 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	AttackCollision->SetVisibility(false);
 	AttackCollision->SetActive(false);
 
-	Debug_AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("DebugAttackCollision"));
-	Debug_AttackCollision->AttachTo(RootComponent);
-	Debug_AttackCollision->SetRelativeLocation(FVector((Capsule->GetScaledCapsuleRadius() + SimpleAttack.AttackLength) / 2.0f, 0.0f, 20.0f));
-	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackLength - Capsule->GetScaledCapsuleRadius(), SimpleAttack.AttackWidth, 32.0f));
-	Debug_AttackCollision->SetGenerateOverlapEvents(false);
-	Debug_AttackCollision->SetHiddenInGame(false);
-	Debug_AttackCollision->SetVisibility(false);
-	Debug_AttackCollision->SetActive(false);
+	DebugAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("DebugAttackCollision"));
+	DebugAttackCollision->AttachTo(RootComponent);
+	DebugAttackCollision->SetRelativeLocation(FVector((Capsule->GetScaledCapsuleRadius() + SimpleAttack.AttackLength) / 2.0f, 0.0f, 20.0f));
+	DebugAttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackLength - Capsule->GetScaledCapsuleRadius(), SimpleAttack.AttackWidth, 32.0f));
+	DebugAttackCollision->SetGenerateOverlapEvents(false);
+	DebugAttackCollision->SetHiddenInGame(false);
+	DebugAttackCollision->SetVisibility(false);
+	DebugAttackCollision->SetActive(false);
 
 	MovePhase = EEnemyPhase::None;
 	AttackPhase = EAttackPhase::NotAttacking;
@@ -71,16 +71,16 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	UnstuckAroundPlayerRadius = 1000.0f;
 	MaxAttempsToUnstuck = 10;
 
-	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
-	Debug_DamageIndicator->SetupAttachment(RootComponent);
-	Debug_DamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
-	Debug_DamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Debug_DamageIndicator->SetGenerateOverlapEvents(false);
-	Debug_DamageIndicator->SetVisibility(false);
+	DebugDamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
+	DebugDamageIndicator->SetupAttachment(RootComponent);
+	DebugDamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+	DebugDamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DebugDamageIndicator->SetGenerateOverlapEvents(false);
+	DebugDamageIndicator->SetVisibility(false);
 
-	Debug_DamageIndicatorTime = 3.0f;
+	DebugDamageIndicatorTime = 3.0f;
 
-	bDebug = false;
+	bIsDebugOn = false;
 
 	//SlowDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Slow Debuff Effect"));
 	//SlowDebuffEffectWidget->SetupAttachment(RootComponent);
@@ -120,9 +120,9 @@ void ABaseNPCSimpleChase::DelayedInit()
 	}
 }
 
-void ABaseNPCSimpleChase::SetTickState(bool Activate)
+void ABaseNPCSimpleChase::SetTickState(bool bToActivate)
 {
-	if (Activate)
+	if (bToActivate)
 	{
 		if (++TickSemaphore == 1)
 		{
@@ -191,22 +191,22 @@ void ABaseNPCSimpleChase::CheckPlayerHit()
 
 void ABaseNPCSimpleChase::ActivateDebugDamageIndicator()
 {
-	Debug_DamageIndicator->SetVisibility(true);
-	if (GetWorld()->GetTimerManager().IsTimerActive(Debug_DamageIndicatorTimerHandle))
+	DebugDamageIndicator->SetVisibility(true);
+	if (GetWorld()->GetTimerManager().IsTimerActive(DebugDamageIndicatorTimerHandle))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(Debug_DamageIndicatorTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(DebugDamageIndicatorTimerHandle);
 	}
-	GetWorld()->GetTimerManager().SetTimer(Debug_DamageIndicatorTimerHandle, this, &ABaseNPCSimpleChase::OnEndDebugDamageIndicatorTimer, Debug_DamageIndicatorTime, false);
+	GetWorld()->GetTimerManager().SetTimer(DebugDamageIndicatorTimerHandle, this, &ABaseNPCSimpleChase::OnEndDebugDamageIndicatorTimer, DebugDamageIndicatorTime, false);
 }
 
 void ABaseNPCSimpleChase::OnEndDebugDamageIndicatorTimer()
 {
-	Debug_DamageIndicator->SetVisibility(false);
+	DebugDamageIndicator->SetVisibility(false);
 }
 
 void ABaseNPCSimpleChase::SetAttackCollision(bool Active)
 {
-	if (bDebug)
+	if (bIsDebugOn)
 	{
 		AttackCollision->SetVisibility(Active);
 	}
@@ -215,17 +215,17 @@ void ABaseNPCSimpleChase::SetAttackCollision(bool Active)
 
 void ABaseNPCSimpleChase::SetDebugAttackCollision(bool Active)
 {
-	if (bDebug)
+	if (bIsDebugOn)
 	{
-		Debug_AttackCollision->SetVisibility(Active);
-		Debug_AttackCollision->SetActive(Active);
+		DebugAttackCollision->SetVisibility(Active);
+		DebugAttackCollision->SetActive(Active);
 	}
 }
 
 void ABaseNPCSimpleChase::TakeDamage(float Damage)
 {
 	Health -= Damage;
-	if (bDebug)
+	if (bIsDebugOn)
 	{
 		ActivateDebugDamageIndicator();
 	}
@@ -278,6 +278,9 @@ void ABaseNPCSimpleChase::Attack()
 		SetDebugAttackCollision(false);
 		SetTickState(false);
 		EnemyActionDelegate.Broadcast(EEnemyAction::AttackEnd, true);
+		break;
+	default:
+		break;
 	}
 }
 

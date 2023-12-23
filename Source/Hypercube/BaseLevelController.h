@@ -37,13 +37,13 @@ class HYPERCUBE_API ABaseLevelController : public AActor
 	class USceneComponent* Root;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAudioComponent* MusicComp_Explore;
+	class UAudioComponent* MusicCompExplore;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAudioComponent* MusicComp_Low;
+	class UAudioComponent* MusicCompLow;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAudioComponent* MusicComp_High;
+	class UAudioComponent* MusicCompHigh;
 
 public:
 	// Sets default values for this actor's properties
@@ -265,7 +265,7 @@ public:
 	void SetEnemyParams(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
-	float GetTargetMusicParameter();
+	float GetTargetMusicParameter() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetScoreboard(int Num);

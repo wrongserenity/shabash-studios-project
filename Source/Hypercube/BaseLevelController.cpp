@@ -66,14 +66,14 @@ ABaseLevelController::ABaseLevelController()
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 
-	MusicComp_Explore = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Exploration"));
-	MusicComp_Explore->SetupAttachment(RootComponent);
+	MusicCompExplore = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Exploration"));
+	MusicCompExplore->SetupAttachment(RootComponent);
 
-	MusicComp_Low = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Low"));
-	MusicComp_Low->SetupAttachment(RootComponent);
+	MusicCompLow = CreateDefaultSubobject<UAudioComponent>(TEXT("Music Low"));
+	MusicCompLow->SetupAttachment(RootComponent);
 
-	MusicComp_High = CreateDefaultSubobject<UAudioComponent>(TEXT("Music High"));
-	MusicComp_High->SetupAttachment(RootComponent);
+	MusicCompHigh = CreateDefaultSubobject<UAudioComponent>(TEXT("Music High"));
+	MusicCompHigh->SetupAttachment(RootComponent);
 
 	MusicParameter = TargetMusicParameter = 0.0f;
 	MusicChangeSpeed = 2.0f;
@@ -93,12 +93,12 @@ void ABaseLevelController::BeginPlay()
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
 	SpawnEnemies();
-	MusicComp_Explore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
-	MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
-	MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
-	MusicComp_Explore->Play();
-	MusicComp_Low->Play();
-	MusicComp_High->Play();
+	MusicCompExplore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+	MusicCompLow->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
+	MusicCompHigh->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+	MusicCompExplore->Play();
+	MusicCompLow->Play();
+	MusicCompHigh->Play();
 	Super::BeginPlay();
 }
 
@@ -117,9 +117,9 @@ void ABaseLevelController::Tick(float DeltaSeconds)
 		{
 			MusicParameter = TargetMusicParameter;
 		}
-		MusicComp_Explore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
-		MusicComp_Low->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
-		MusicComp_High->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+		MusicCompExplore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+		MusicCompLow->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
+		MusicCompHigh->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
 }
 
@@ -251,7 +251,7 @@ void ABaseLevelController::SetPlayerCharacter(class AHypercubeCharacter* PlayerC
 
 void ABaseLevelController::OnPlayerDeath()
 {
-	CurLevelData.PlayerWon = false;
+	CurLevelData.bIsPlayerWon = false;
 	TargetMusicParameter = 0.0f;
 	SaveLevelData();
 	GetWorld()->GetTimerManager().SetTimer(AfterLevelTimerHandle, this, &ABaseLevelController::AfterPlayerDeath, AfterPlayerDeathTime, false);
@@ -264,7 +264,7 @@ void ABaseLevelController::AfterPlayerDeath()
 
 void ABaseLevelController::OnAllEnemiesDead()
 {
-	CurLevelData.PlayerWon = true;
+	CurLevelData.bIsPlayerWon = true;
 	SaveLevelData();
 	AllEnemiesDeadDelegate.Broadcast();
 }
@@ -347,14 +347,14 @@ float ABaseLevelController::GetDifficultyParameter()
 		return 0.5f;
 	}
 	int i = LevelData.Num() - 1;
-	while (i >= 0 && !LevelData[i].PlayerWon)
+	while (i >= 0 && !LevelData[i].bIsPlayerWon)
 	{
 		--i;
 	}
 	int DeathCount = LevelData.Num() - 1 - i;
 	int OnDeathChasing = LevelData.Last().OnDeathEnemyChasing;
 	float PlayTime = LevelData.Last().PlayTime;
-	bool IsWon = LevelData.Last().PlayerWon;
+	bool IsWon = LevelData.Last().bIsPlayerWon;
 
 	float DeathCountParameter = GetDifficultyParameterFrom(DeathCount, DeathCountBounds, DeathCountValues) * DeathCountCost;
 	float OnDeathChasingParameter = (IsWon ? 1.0f : GetDifficultyParameterFrom(OnDeathChasing, OnDeathEnemyAggroBounds, OnDeathEnemyAggroValues)) * OnDeathEnemyAggroCost;
@@ -379,7 +379,7 @@ void ABaseLevelController::SetEnemyParams(class ABaseNPCSimpleChase* Enemy)
 	Enemy->GetNoticeCollision()->SetSphereRadius(Enemy->AggroRadius * GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
 }
 
-float ABaseLevelController::GetTargetMusicParameter()
+float ABaseLevelController::GetTargetMusicParameter() const
 {
 	if (Player->Health <= 0.0f)
 	{

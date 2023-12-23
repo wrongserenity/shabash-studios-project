@@ -12,7 +12,7 @@ struct FLevelData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool PlayerWon;
+	bool bIsPlayerWon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Score;

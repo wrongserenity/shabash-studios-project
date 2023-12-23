@@ -85,10 +85,10 @@ class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
 	class UBoxComponent* AttackCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* Debug_AttackCollision;
+	class UBoxComponent* DebugAttackCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* Debug_DamageIndicator;
+	class UStaticMeshComponent* DebugDamageIndicator;
 
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	//class UWidgetComponent* SlowDebuffEffectWidget;
@@ -137,10 +137,10 @@ public:
 	int MaxAttempsToUnstuck;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDebug;
+	bool bIsDebugOn;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	float Debug_DamageIndicatorTime;
+	float DebugDamageIndicatorTime;
 
 protected:
 
@@ -157,7 +157,7 @@ protected:
 	float DelayedInitTime;
 	void DelayedInit();
 
-	void SetTickState(bool Activate);
+	void SetTickState(bool bToActivate);
 	void ForceTickDisable();
 
 	virtual void BeginPlay() override;
@@ -167,7 +167,7 @@ protected:
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
 
-	FTimerHandle Debug_DamageIndicatorTimerHandle;
+	FTimerHandle DebugDamageIndicatorTimerHandle;
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
 
