@@ -9,6 +9,9 @@
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
 
+// Base class for level controller
+// Level controller provides data saving and loading, enemy spawning and difficulty settings realisation
+
 bool FScoreboardData::operator<(const FScoreboardData& Other) const
 {
 	return Score > Other.Score;
@@ -207,11 +210,6 @@ void ABaseLevelController::SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint)
 	}
 }
 
-void ABaseLevelController::AddEnemiesKilled()
-{
-	++EnemiesKilled;
-}
-
 void ABaseLevelController::AddEnemy(class ABaseNPCSimpleChase* Enemy)
 {
 	Enemies.Add(Enemy);
@@ -222,7 +220,7 @@ void ABaseLevelController::RemoveEnemy(class ABaseNPCSimpleChase* Enemy)
 	if (Enemies.Contains(Enemy))
 	{
 		Enemies.Remove(Enemy);
-		AddEnemiesKilled();
+		++EnemiesKilled;
 	}
 	if (Enemies.Num() <= FewEnemiesEventCount)
 	{

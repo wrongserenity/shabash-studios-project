@@ -144,23 +144,7 @@ void AHypercubeCharacter::BeginPlay()
 	}
 	PlayerController = GetWorld()->GetFirstPlayerController();
 	Super::BeginPlay();
-	//GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &AHypercubeCharacter::DelayedInit, DelayedInitTime, false);
 }
-
-//void AHypercubeCharacter::DelayedInit()
-//{
-//	TArray<AActor*> FoundActors;
-//	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseLevelController::StaticClass(), FoundActors);
-//	if (FoundActors.Num())
-//	{
-//		LevelController = Cast<ABaseLevelController>(FoundActors[0]);
-//		LevelController->SetPlayerCharacter(this);
-//	}
-//	else
-//	{
-//		LevelController = nullptr;
-//	}
-//}
 
 void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {

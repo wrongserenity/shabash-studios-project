@@ -100,7 +100,10 @@ void ABaseNPCSimpleChase::DelayedInit()
 		if (FoundActors.Num())
 		{
 			LevelController = Cast<ABaseLevelController>(FoundActors[0]);
-			LevelController->AddEnemy(this);
+			if (LevelController)
+			{
+				LevelController->AddEnemy(this);
+			}
 		}
 	}
 }

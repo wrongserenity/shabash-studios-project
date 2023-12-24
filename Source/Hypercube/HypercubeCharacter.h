@@ -257,10 +257,6 @@ protected:
 
 protected:
 
-	//FTimerHandle DelayedInitTimerHandle;
-	//float DelayedInitTime;
-	//void DelayedInit();
-
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 

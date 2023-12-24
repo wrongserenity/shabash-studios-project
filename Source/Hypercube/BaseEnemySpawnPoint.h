@@ -4,6 +4,8 @@
 #include "GameFramework/Actor.h"
 #include "BaseEnemySpawnPoint.generated.h"
 
+// Base class for enemy spawn point
+
 UCLASS()
 class HYPERCUBE_API ABaseEnemySpawnPoint : public AActor
 {
