@@ -2,7 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Base_NPC_SimpleChase.generated.h"
+#include "BaseNPCSimpleChase.generated.h"
+
+// Base class for enemy NPC
 
 USTRUCT(BlueprintType)
 struct FAttackStats
@@ -21,9 +23,11 @@ struct FAttackStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AfterAttackTime;
 
+	// Speed with which enemy are rotating towards the player while attacking
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackRotationMultiplier;
 
+	// Speed with which enemy are going forward during active frames of attack
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackMoveForwardSpeed;
 
@@ -37,7 +41,7 @@ struct FAttackStats
 UENUM(BlueprintType)
 enum class EAttackPhase : uint8
 {
-	NotAttacking UMETA(DisplayName="NotAttacking"),
+	NotAttacking UMETA(DisplayName = "NotAttacking"),
 	Opener UMETA(DisplayName = "Opener"),
 	Attacking UMETA(DisplayName = "Attacking"),
 	AfterAttack UMETA(DisplayName = "AfterAttack")
@@ -68,7 +72,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyAction, EEnemyAction, Action, bool, Success);
 
 UCLASS()
-class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
+class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -85,23 +89,18 @@ class HYPERCUBE_API ABase_NPC_SimpleChase : public ACharacter
 	class UBoxComponent* AttackCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* Debug_AttackCollision;
+	class UBoxComponent* DebugAttackCollision;
 
+	// Some mesh appearing above character when damaged
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* Debug_DamageIndicator;
-
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	//class UWidgetComponent* SlowDebuffEffectWidget;
-
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	//class UWidgetComponent* DamageDebuffEffectWidget;
+	class UStaticMeshComponent* DebugDamageIndicator;
 
 public:
 
-	ABase_NPC_SimpleChase();
+	ABaseNPCSimpleChase();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = LevelController)
-	class ABase_LevelController* LevelController;
+	class ABaseLevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnEnemyDeath EnemyDeathDelegate;
@@ -118,32 +117,39 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Jump")
 	float JumpTime;
 
+	// Radius of visibility
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroRadius;
 
+	// Time between aggro and start of chasing
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Aggro")
 	float AggroTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack")
 	FAttackStats SimpleAttack;
 
+	// Number of seconds between checks of player sight on enemy when enemy is stuck
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	float UnstuckPlayerSightUpdate;
 
+	// Radius around player in which stuck enemies will be teleported
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	float UnstuckAroundPlayerRadius;
 
+	// Maximum number of attemps to unstuck during one iteration
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	int MaxAttempsToUnstuck;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDebug;
+	bool bIsDebugOn;
 
+	// Time for which debug damage indicator becames visible
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	float Debug_DamageIndicatorTime;
+	float DebugDamageIndicatorTime;
 
 protected:
 
+	// Semaphore that controls Tick() usage
 	uint8 TickSemaphore;
 
 	FTimerHandle NoticeTimerHandle;
@@ -153,11 +159,15 @@ protected:
 	EAttackPhase AttackPhase;
 	class AHypercubeCharacter* AttackTarget;
 
+	// Dealayed initialization
 	FTimerHandle DelayedInitTimerHandle;
 	float DelayedInitTime;
 	void DelayedInit();
 
-	void SetTickState(bool Activate);
+	// Pass true when Tick() is needed (increment the semaphore), false when it becames unnecessary (decrement the semaphore)
+	void SetTickState(bool bToActivate);
+
+	// Force disable of ticking and setting TickSemaphore = 0
 	void ForceTickDisable();
 
 	virtual void BeginPlay() override;
@@ -167,7 +177,12 @@ protected:
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
 
-	FTimerHandle Debug_DamageIndicatorTimerHandle;
+	void AfterNotice();
+	
+	void SetAttackCollision(bool bToActivate);
+	void SetDebugAttackCollision(bool bToActivate);
+
+	FTimerHandle DebugDamageIndicatorTimerHandle;
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
 
@@ -184,13 +199,13 @@ protected:
 
 	FTimerHandle CheckPlayerSightTimerHandle;
 
-public:	
+public:
 
-	UFUNCTION(BlueprintCallable)
-	void SetAttackCollision(bool Active);
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE class ABaseLevelController* GetLevelController() const { return LevelController; }
 
-	UFUNCTION(BlueprintCallable)
-	void SetDebugAttackCollision(bool Active);
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE class USphereComponent* GetNoticeCollision() const { return NoticeCollision; }
 
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
@@ -198,23 +213,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void OnNotice();
 
-	UFUNCTION(BlueprintCallable)
-	void AfterNotice();
-
+	// Execute simple attack
 	UFUNCTION(BlueprintCallable)
 	void Attack();
 
 	UFUNCTION(BlueprintCallable)
 	void JumpTo(FVector Destination);
 
+	// Called when health drops below zero
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class ABase_LevelController* GetLevelController() const;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class USphereComponent* GetNoticeCollision() const;
 
 	UFUNCTION(BlueprintCallable)
 	void SetSlowDebuff(float Mult, float Time);
@@ -222,9 +230,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetDamageDebuff(float Mult, float Time);
 
+	// True if player camera has sight on this NPC
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool PlayerHasSightOn() const;
 
+	// Called when NPC is stuck and player is not seeing it. Teleports NPC near plauyer out of his sight
 	UFUNCTION(BlueprintCallable)
 	void Unstuck();
 };

@@ -10,15 +10,14 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Math/UnrealMathUtility.h"
 #include "Components/BoxComponent.h"
-#include "Base_NPC_SimpleChase.h"
+#include "BaseNPCSimpleChase.h"
 #include "Components/StaticMeshComponent.h"
-#include "Base_LevelController.h"
+#include "BaseLevelController.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/WidgetComponent.h"
 
-//////////////////////////////////////////////////////////////////////////
-// AHypercubeCharacter
+// Base class for player Character
 
 AHypercubeCharacter::AHypercubeCharacter()
 {
@@ -58,7 +57,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	AttackPhase = EPlayerAttackPhase::None;
 	
 	bCanDash = true;
-	bDashMovementBlocked = true;
+	bIsDashMovementBlocked = true;
 
 	Health = MaxHealth = 100.0f;
 	InvincAfterDamage = 1.0f;
@@ -81,7 +80,7 @@ AHypercubeCharacter::AHypercubeCharacter()
 	bDamageMultiplierStays = false;
 	bDamageMultiplierFalling = false;
 
-	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 150.0f, 90.0f, 68.0f };
+	SimpleAttack = { 25.0f, 0.1f, 0.2f, 0.1f, 90.0f, 68.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collision"));
 	AttackCollision->SetupAttachment(RootComponent);
@@ -91,22 +90,22 @@ AHypercubeCharacter::AHypercubeCharacter()
 	AttackCollision->SetHiddenInGame(false);
 	AttackCollision->SetVisibility(false);
 
-	Debug_AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Debug Attack Collision"));
-	Debug_AttackCollision->SetupAttachment(RootComponent);
-	Debug_AttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
-	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
-	Debug_AttackCollision->SetGenerateOverlapEvents(true);
-	Debug_AttackCollision->SetHiddenInGame(false);
-	Debug_AttackCollision->SetVisibility(false);
+	DebugAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("Debug Attack Collision"));
+	DebugAttackCollision->SetupAttachment(RootComponent);
+	DebugAttackCollision->SetRelativeLocation(FVector(SimpleAttack.AttackRadius / 2.0f + GetCapsuleComponent()->GetUnscaledCapsuleRadius() / 2.0f, 0.0f, 20.0f));
+	DebugAttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackRadius - GetCapsuleComponent()->GetUnscaledCapsuleRadius(), SimpleAttack.AttackRadius * FMath::Tan(SimpleAttack.AttackAngle * PI / 360.0f), 32.0f));
+	DebugAttackCollision->SetGenerateOverlapEvents(true);
+	DebugAttackCollision->SetHiddenInGame(false);
+	DebugAttackCollision->SetVisibility(false);
 
-	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
-	Debug_DamageIndicator->SetupAttachment(RootComponent);
-	Debug_DamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
-	Debug_DamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Debug_DamageIndicator->SetGenerateOverlapEvents(false);
-	Debug_DamageIndicator->SetVisibility(false);
+	DebugDamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
+	DebugDamageIndicator->SetupAttachment(RootComponent);
+	DebugDamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+	DebugDamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DebugDamageIndicator->SetGenerateOverlapEvents(false);
+	DebugDamageIndicator->SetVisibility(false);
 
-	Debug_DamageIndicatorTime = 3.0f;
+	DebugDamageIndicatorTime = 3.0f;
 
 	//DelayedInitTime = 0.2f;
 
@@ -116,10 +115,11 @@ AHypercubeCharacter::AHypercubeCharacter()
 	DamageFXTime = 0.5f;
 	DamageFXTimer = 0.0f;
 
-	bDebug = false;
+	bIsDebugOn = false;
 
 	TargetCameraFov = FollowCamera->FieldOfView;
 	CameraFovChangeSpeed = 10.0f;
+	SpeedBuffCameraFovMultiplicator = 1.3f;
 
 	SpeedBuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Speed Buff Effect"));
 	SpeedBuffEffectWidget->SetupAttachment(RootComponent);
@@ -132,10 +132,10 @@ AHypercubeCharacter::AHypercubeCharacter()
 void AHypercubeCharacter::BeginPlay()
 {
 	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseLevelController::StaticClass(), FoundActors);
 	if (FoundActors.Num())
 	{
-		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
+		LevelController = Cast<ABaseLevelController>(FoundActors[0]);
 		LevelController->SetPlayerCharacter(this);
 	}
 	else
@@ -144,23 +144,7 @@ void AHypercubeCharacter::BeginPlay()
 	}
 	PlayerController = GetWorld()->GetFirstPlayerController();
 	Super::BeginPlay();
-	//GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &AHypercubeCharacter::DelayedInit, DelayedInitTime, false);
 }
-
-//void AHypercubeCharacter::DelayedInit()
-//{
-//	TArray<AActor*> FoundActors;
-//	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
-//	if (FoundActors.Num())
-//	{
-//		LevelController = Cast<ABase_LevelController>(FoundActors[0]);
-//		LevelController->SetPlayerCharacter(this);
-//	}
-//	else
-//	{
-//		LevelController = nullptr;
-//	}
-//}
 
 void AHypercubeCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -239,7 +223,7 @@ void AHypercubeCharacter::DashTick(float DeltaSeconds)
 	AddActorWorldOffset(DashDestination * (DashDistance / DashTime) * DashVelocityCurve(DashTimer / DashTime) * DeltaSeconds, true);
 	DashTimer += DeltaSeconds;
 	DashBarPercentage = 1.0f - DashTimer / DashTime;
-	if (bDashMovementBlocked && DashTime - DashTimer <= DashMoveControlTime)
+	if (bIsDashMovementBlocked && DashTime - DashTimer <= DashMoveControlTime)
 	{
 		AllowMovingWhileDash();
 	}
@@ -251,16 +235,16 @@ void AHypercubeCharacter::DashTick(float DeltaSeconds)
 
 void AHypercubeCharacter::AttackTick()
 {
-	TSet<AActor*> collisions;
-	AttackCollision->GetOverlappingActors(collisions, ABase_NPC_SimpleChase::StaticClass());
-	for (auto it = collisions.begin(); it != collisions.end(); ++it)
+	TSet<AActor*> Collisions;
+	AttackCollision->GetOverlappingActors(Collisions, ABaseNPCSimpleChase::StaticClass());
+	for (AActor* CollidedActor : Collisions)
 	{
-		ABase_NPC_SimpleChase* tmp = Cast<ABase_NPC_SimpleChase>(*it);
-		if (tmp && !AttackEnemiesCollided.Contains(tmp))
+		ABaseNPCSimpleChase* ActorNPC = Cast<ABaseNPCSimpleChase>(CollidedActor);
+		if (ActorNPC && !AttackEnemiesCollided.Contains(ActorNPC))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Enemy damaged!"));
-			tmp->TakeDamage(SimpleAttack.Damage * DamageMultiplier);
-			AttackEnemiesCollided.Add(tmp);
+			ActorNPC->TakeDamage(SimpleAttack.Damage * DamageMultiplier);
+			AttackEnemiesCollided.Add(ActorNPC);
 		}
 	}
 }
@@ -294,11 +278,9 @@ void AHypercubeCharacter::MoveRight(float Value)
 	}
 }
 
-float AHypercubeCharacter::DashVelocityCurve(float x) // f(x) where int_0^1(f(x))dx = 1
+inline float AHypercubeCharacter::DashVelocityCurve(float x)
 {
 	return (x >= 0.0f && x <= 1.0f) ? (PI / 2.0f) * FMath::Sin(PI * x) : 0.0f;
-	//return (x < 0.5f ? 4.0f * x : 4.0f - 4.0f * x);
-	//return 1.0;
 }
 
 inline float AHypercubeCharacter::DamageFXCurve(float x)
@@ -322,7 +304,6 @@ void AHypercubeCharacter::Dash()
 {
 	if (!bCanDash || MovementPhase != EPlayerMovementPhase::Walking)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Can not dash!"));
 		return;
 	}
 	PlayerActionDelegate.Broadcast(EPlayerAction::Dash);
@@ -348,19 +329,11 @@ void AHypercubeCharacter::Dash()
 	bCanDash = false;
 	
 	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-
-	//TSet<AActor*> collisions;
-	//GetCapsuleComponent()->GetOverlappingActors(collisions);
-	//UE_LOG(LogTemp, Warning, TEXT("%d"), collisions.Num());
-	//for (auto it = collisions.begin(); it != collisions.end(); ++it)
-	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("%s"), *(*it)->GetName());
-	//}
 }
 
 void AHypercubeCharacter::AllowMovingWhileDash()
 {
-	bDashMovementBlocked = false;
+	bIsDashMovementBlocked = false;
 	MoveComp->SetMovementMode(EMovementMode::MOVE_Flying);
 }
 
@@ -368,33 +341,31 @@ void AHypercubeCharacter::StopDashing()
 {
 	MoveComp->SetMovementMode(EMovementMode::MOVE_Walking);
 	MovementPhase = EPlayerMovementPhase::Walking;
-	bDashMovementBlocked = true;
+	bIsDashMovementBlocked = true;
 	Capsule->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
-	//UE_LOG(LogTemp, Warning, TEXT("End of dash"));
 	DashCooldownTimer = 0.0f;
 }
 
 void AHypercubeCharacter::OnEndDashCooldown()
 {
-	//UE_LOG(LogTemp, Warning, TEXT("End of dash cooldown"));
 	bCanDash = true;
 }
 
-void AHypercubeCharacter::SetAttackCollision(bool Activate)
+void AHypercubeCharacter::SetAttackCollision(bool bToActivate)
 {
-	if (bDebug)
+	if (bIsDebugOn)
 	{
-		AttackCollision->SetVisibility(Activate);
+		AttackCollision->SetVisibility(bToActivate);
 	}
-	AttackCollision->SetActive(Activate);
+	AttackCollision->SetActive(bToActivate);
 }
 
-void AHypercubeCharacter::SetDebugAttackCollision(bool Activate)
+void AHypercubeCharacter::SetDebugAttackCollision(bool bToActivate)
 {
-	if (bDebug)
+	if (bIsDebugOn)
 	{
-		Debug_AttackCollision->SetVisibility(Activate);
-		Debug_AttackCollision->SetActive(Activate);
+		DebugAttackCollision->SetVisibility(bToActivate);
+		DebugAttackCollision->SetActive(bToActivate);
 	}
 }
 
@@ -435,6 +406,9 @@ void AHypercubeCharacter::Attack()
 		AttackPhase = EPlayerAttackPhase::None;
 		SetDebugAttackCollision(false);
 		OnEndAttack();
+		break;
+	default:
+		break;
 	}
 }
 
@@ -448,17 +422,17 @@ void AHypercubeCharacter::OnEndAttack()
 
 void AHypercubeCharacter::ActivateDebugDamageIndicator()
 {
-	Debug_DamageIndicator->SetVisibility(true);
-	if (GetWorld()->GetTimerManager().IsTimerActive(Debug_DamageIndicatorTimerHandle))
+	DebugDamageIndicator->SetVisibility(true);
+	if (GetWorld()->GetTimerManager().IsTimerActive(DebugDamageIndicatorTimerHandle))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(Debug_DamageIndicatorTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(DebugDamageIndicatorTimerHandle);
 	}
-	GetWorld()->GetTimerManager().SetTimer(Debug_DamageIndicatorTimerHandle, this, &AHypercubeCharacter::OnEndDebugDamageIndicatorTimer, Debug_DamageIndicatorTime, false);
+	GetWorld()->GetTimerManager().SetTimer(DebugDamageIndicatorTimerHandle, this, &AHypercubeCharacter::OnEndDebugDamageIndicatorTimer, DebugDamageIndicatorTime, false);
 }
 
 void AHypercubeCharacter::OnEndDebugDamageIndicatorTimer()
 {
-	Debug_DamageIndicator->SetVisibility(false);
+	DebugDamageIndicator->SetVisibility(false);
 }
 
 void AHypercubeCharacter::TakeDamage(float Damage)
@@ -468,12 +442,11 @@ void AHypercubeCharacter::TakeDamage(float Damage)
 		return;
 	}
 	Health -= Damage;
-	if (bDebug)
+	if (bIsDebugOn)
 	{
 		ActivateDebugDamageIndicator();
 	}
 	bIsInvincible = true;
-	//UE_LOG(LogTemp, Warning, TEXT("Damage: %f, Now Health: %f"), Damage, Health);
 	DamageFXTimer = DamageFXTime;
 	PlayerActionDelegate.Broadcast(EPlayerAction::Damaged);
 	if (Health <= 0.0f)
@@ -525,7 +498,7 @@ void AHypercubeCharacter::OnEndDamageMultiplierStays()
 	bDamageMultiplierFalling = true;
 }
 
-void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
+void AHypercubeCharacter::OnEnemyAggro(class ABaseNPCSimpleChase* Enemy)
 {
 	if (!EnemyChasing.Contains(Enemy))
 	{
@@ -534,7 +507,7 @@ void AHypercubeCharacter::OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy)
 	}
 }
 
-void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
+void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
 {
 	Score += BaseScoreForEnemy * DamageMultiplier;
 	Health += Vampirism * Enemy->MaxHealth;
@@ -551,12 +524,12 @@ void AHypercubeCharacter::OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy)
 	}
 }
 
-void AHypercubeCharacter::SetMouseCursorShow(bool Activate)
+void AHypercubeCharacter::SetMouseCursorShow(bool bToShow)
 {
-	PlayerController->bShowMouseCursor = Activate;
-	PlayerController->bEnableClickEvents = Activate;
-	PlayerController->bEnableMouseOverEvents = Activate;
-	if (Activate)
+	PlayerController->bShowMouseCursor = bToShow;
+	PlayerController->bEnableClickEvents = bToShow;
+	PlayerController->bEnableMouseOverEvents = bToShow;
+	if (bToShow)
 	{
 		PlayerController->SetInputMode(FInputModeGameAndUI());
 	}
@@ -572,11 +545,6 @@ void AHypercubeCharacter::Pause()
 	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
 	SetMouseCursorShow(bIsGamePaused);
 	PauseDelegate.Broadcast(bIsGamePaused);
-}
-
-ABase_LevelController* AHypercubeCharacter::GetLevelController() const
-{
-	return LevelController;
 }
 
 int AHypercubeCharacter::GetEnemyChasingCount() const
@@ -598,7 +566,7 @@ void AHypercubeCharacter::SetSpeedBuff(float SpeedMult, float JumpMult, float Ti
 
 		MoveComp->MaxWalkSpeed *= SpeedMult;
 		MoveComp->JumpZVelocity *= JumpMult;
-		TargetCameraFov *= 1.3f;
+		TargetCameraFov *= SpeedBuffCameraFovMultiplicator;
 
 		SpeedBuffEffectWidget->SetVisibility(true);
 	}

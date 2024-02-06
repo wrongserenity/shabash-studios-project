@@ -1,7 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "Base_NPC_SimpleChase.h"
+#include "BaseNPCSimpleChase.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/BoxComponent.h"
@@ -10,15 +7,15 @@
 #include "Kismet/GameplayStatics.h"
 #include "HypercubeCharacter.h"
 #include "Components/SphereComponent.h"
-#include "Base_LevelController.h"
+#include "BaseLevelController.h"
 #include "Components/WidgetComponent.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavigationSystem.h"
 
-// Sets default values
-ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
+// Base class for enemy NPC
+
+ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	DelayedInitTime = 0.1f;
 
@@ -43,7 +40,7 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	NoticeCollision->SetSphereRadius(AggroRadius);
 	NoticeCollision->SetGenerateOverlapEvents(false);
 
-	SimpleAttack = { 25.0f, 0.7f, 0.3f, 0.2f, 7.5f, 150.0f, 75.0f, 35.0f };
+	SimpleAttack = { 25.0f, 0.4f, 0.3f, 0.2f, 7.5f, 150.0f, 75.0f, 35.0f };
 
 	AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
 	AttackCollision->AttachTo(RootComponent);
@@ -54,14 +51,14 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	AttackCollision->SetVisibility(false);
 	AttackCollision->SetActive(false);
 
-	Debug_AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("DebugAttackCollision"));
-	Debug_AttackCollision->AttachTo(RootComponent);
-	Debug_AttackCollision->SetRelativeLocation(FVector((Capsule->GetScaledCapsuleRadius() + SimpleAttack.AttackLength) / 2.0f, 0.0f, 20.0f));
-	Debug_AttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackLength - Capsule->GetScaledCapsuleRadius(), SimpleAttack.AttackWidth, 32.0f));
-	Debug_AttackCollision->SetGenerateOverlapEvents(false);
-	Debug_AttackCollision->SetHiddenInGame(false);
-	Debug_AttackCollision->SetVisibility(false);
-	Debug_AttackCollision->SetActive(false);
+	DebugAttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("DebugAttackCollision"));
+	DebugAttackCollision->AttachTo(RootComponent);
+	DebugAttackCollision->SetRelativeLocation(FVector((Capsule->GetScaledCapsuleRadius() + SimpleAttack.AttackLength) / 2.0f, 0.0f, 20.0f));
+	DebugAttackCollision->SetBoxExtent(FVector(SimpleAttack.AttackLength - Capsule->GetScaledCapsuleRadius(), SimpleAttack.AttackWidth, 32.0f));
+	DebugAttackCollision->SetGenerateOverlapEvents(false);
+	DebugAttackCollision->SetHiddenInGame(false);
+	DebugAttackCollision->SetVisibility(false);
+	DebugAttackCollision->SetActive(false);
 
 	MovePhase = EEnemyPhase::None;
 	AttackPhase = EAttackPhase::NotAttacking;
@@ -71,37 +68,25 @@ ABase_NPC_SimpleChase::ABase_NPC_SimpleChase()
 	UnstuckAroundPlayerRadius = 1000.0f;
 	MaxAttempsToUnstuck = 10;
 
-	Debug_DamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
-	Debug_DamageIndicator->SetupAttachment(RootComponent);
-	Debug_DamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
-	Debug_DamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Debug_DamageIndicator->SetGenerateOverlapEvents(false);
-	Debug_DamageIndicator->SetVisibility(false);
+	DebugDamageIndicator = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Debug Damage Indicator"));
+	DebugDamageIndicator->SetupAttachment(RootComponent);
+	DebugDamageIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+	DebugDamageIndicator->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DebugDamageIndicator->SetGenerateOverlapEvents(false);
+	DebugDamageIndicator->SetVisibility(false);
 
-	Debug_DamageIndicatorTime = 3.0f;
+	DebugDamageIndicatorTime = 3.0f;
 
-	bDebug = false;
-
-	//SlowDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Slow Debuff Effect"));
-	//SlowDebuffEffectWidget->SetupAttachment(RootComponent);
-	//SlowDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	//SlowDebuffEffectWidget->SetVisibility(false);
-
-	
-	//DamageDebuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Damage Debuff Effect"));
-	//DamageDebuffEffectWidget->SetupAttachment(RootComponent);
-	//DamageDebuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	//DamageDebuffEffectWidget->SetVisibility(false);
+	bIsDebugOn = false;
 }
 
-// Called when the game starts or when spawned
-void ABase_NPC_SimpleChase::BeginPlay()
+void ABaseNPCSimpleChase::BeginPlay()
 {
-	GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &ABase_NPC_SimpleChase::DelayedInit, DelayedInitTime, false);
+	GetWorld()->GetTimerManager().SetTimer(DelayedInitTimerHandle, this, &ABaseNPCSimpleChase::DelayedInit, DelayedInitTime, false);
 	Super::BeginPlay();
 }
 
-void ABase_NPC_SimpleChase::DelayedInit()
+void ABaseNPCSimpleChase::DelayedInit()
 {
 	AttackTarget = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	NoticeCollision->SetGenerateOverlapEvents(true);
@@ -111,18 +96,21 @@ void ABase_NPC_SimpleChase::DelayedInit()
 	if (!LevelController)
 	{
 		TArray<AActor*> FoundActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABase_LevelController::StaticClass(), FoundActors);
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseLevelController::StaticClass(), FoundActors);
 		if (FoundActors.Num())
 		{
-			LevelController = Cast<ABase_LevelController>(FoundActors[0]);
-			LevelController->AddEnemy(this);
+			LevelController = Cast<ABaseLevelController>(FoundActors[0]);
+			if (LevelController)
+			{
+				LevelController->AddEnemy(this);
+			}
 		}
 	}
 }
 
-void ABase_NPC_SimpleChase::SetTickState(bool Activate)
+void ABaseNPCSimpleChase::SetTickState(bool bToActivate)
 {
-	if (Activate)
+	if (bToActivate)
 	{
 		if (++TickSemaphore == 1)
 		{
@@ -142,13 +130,13 @@ void ABase_NPC_SimpleChase::SetTickState(bool Activate)
 	}
 }
 
-void ABase_NPC_SimpleChase::ForceTickDisable()
+void ABaseNPCSimpleChase::ForceTickDisable()
 {
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
 }
 
-void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
+void ABaseNPCSimpleChase::Tick(float DeltaSeconds)
 {
 	if (AttackPhase != EAttackPhase::NotAttacking)
 	{
@@ -166,7 +154,7 @@ void ABase_NPC_SimpleChase::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 }
 
-void ABase_NPC_SimpleChase::TickRotateToTarget(float DeltaSeconds)
+void ABaseNPCSimpleChase::TickRotateToTarget(float DeltaSeconds)
 {
 	FVector ToTarget = AttackTarget->GetActorLocation() - GetActorLocation();
 	ToTarget.Z = 0.0f;
@@ -174,12 +162,12 @@ void ABase_NPC_SimpleChase::TickRotateToTarget(float DeltaSeconds)
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * SimpleAttack.AttackRotationMultiplier), FVector::ZAxisVector));
 }
 
-void ABase_NPC_SimpleChase::TickMoveForward(float DeltaSeconds)
+void ABaseNPCSimpleChase::TickMoveForward(float DeltaSeconds)
 {
 	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds, true);
 }
 
-void ABase_NPC_SimpleChase::CheckPlayerHit()
+void ABaseNPCSimpleChase::CheckPlayerHit()
 {
 	TSet<AActor*> collisions;
 	AttackCollision->GetOverlappingActors(collisions, AHypercubeCharacter::StaticClass());
@@ -189,43 +177,43 @@ void ABase_NPC_SimpleChase::CheckPlayerHit()
 	}
 }
 
-void ABase_NPC_SimpleChase::ActivateDebugDamageIndicator()
+void ABaseNPCSimpleChase::ActivateDebugDamageIndicator()
 {
-	Debug_DamageIndicator->SetVisibility(true);
-	if (GetWorld()->GetTimerManager().IsTimerActive(Debug_DamageIndicatorTimerHandle))
+	DebugDamageIndicator->SetVisibility(true);
+	if (GetWorld()->GetTimerManager().IsTimerActive(DebugDamageIndicatorTimerHandle))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(Debug_DamageIndicatorTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(DebugDamageIndicatorTimerHandle);
 	}
-	GetWorld()->GetTimerManager().SetTimer(Debug_DamageIndicatorTimerHandle, this, &ABase_NPC_SimpleChase::OnEndDebugDamageIndicatorTimer, Debug_DamageIndicatorTime, false);
+	GetWorld()->GetTimerManager().SetTimer(DebugDamageIndicatorTimerHandle, this, &ABaseNPCSimpleChase::OnEndDebugDamageIndicatorTimer, DebugDamageIndicatorTime, false);
 }
 
-void ABase_NPC_SimpleChase::OnEndDebugDamageIndicatorTimer()
+void ABaseNPCSimpleChase::OnEndDebugDamageIndicatorTimer()
 {
-	Debug_DamageIndicator->SetVisibility(false);
+	DebugDamageIndicator->SetVisibility(false);
 }
 
-void ABase_NPC_SimpleChase::SetAttackCollision(bool Active)
+void ABaseNPCSimpleChase::SetAttackCollision(bool bToActivate)
 {
-	if (bDebug)
+	if (bIsDebugOn)
 	{
-		AttackCollision->SetVisibility(Active);
+		AttackCollision->SetVisibility(bToActivate);
 	}
-	AttackCollision->SetActive(Active);
+	AttackCollision->SetActive(bToActivate);
 }
 
-void ABase_NPC_SimpleChase::SetDebugAttackCollision(bool Active)
+void ABaseNPCSimpleChase::SetDebugAttackCollision(bool bToActivate)
 {
-	if (bDebug)
+	if (bIsDebugOn)
 	{
-		Debug_AttackCollision->SetVisibility(Active);
-		Debug_AttackCollision->SetActive(Active);
+		DebugAttackCollision->SetVisibility(bToActivate);
+		DebugAttackCollision->SetActive(bToActivate);
 	}
 }
 
-void ABase_NPC_SimpleChase::TakeDamage(float Damage)
+void ABaseNPCSimpleChase::TakeDamage(float Damage)
 {
 	Health -= Damage;
-	if (bDebug)
+	if (bIsDebugOn)
 	{
 		ActivateDebugDamageIndicator();
 	}
@@ -236,21 +224,21 @@ void ABase_NPC_SimpleChase::TakeDamage(float Damage)
 	}
 }
 
-void ABase_NPC_SimpleChase::OnNotice()
+void ABaseNPCSimpleChase::OnNotice()
 {
 	AttackTarget->OnEnemyAggro(this);
 	MovePhase = EEnemyPhase::Noticing;
 	SetTickState(true);
-	GetWorld()->GetTimerManager().SetTimer(NoticeTimerHandle, this, &ABase_NPC_SimpleChase::AfterNotice, AggroTime, false);
+	GetWorld()->GetTimerManager().SetTimer(NoticeTimerHandle, this, &ABaseNPCSimpleChase::AfterNotice, AggroTime, false);
 }
 
-void ABase_NPC_SimpleChase::AfterNotice()
+void ABaseNPCSimpleChase::AfterNotice()
 {
 	MovePhase = EEnemyPhase::Chasing;
 	SetTickState(false);
 }
 
-void ABase_NPC_SimpleChase::Attack()
+void ABaseNPCSimpleChase::Attack()
 {
 	switch (AttackPhase)
 	{
@@ -259,29 +247,32 @@ void ABase_NPC_SimpleChase::Attack()
 		AttackPhase = EAttackPhase::Opener;
 		SetTickState(true);
 		SetDebugAttackCollision(true);
-		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.OpenerTime, false);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABaseNPCSimpleChase::Attack, SimpleAttack.OpenerTime, false);
 		break;
 	case EAttackPhase::Opener:
 		AttackPhase = EAttackPhase::Attacking;
 		SetDebugAttackCollision(false);
 		SetAttackCollision(true);
-		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AttackTime, false);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABaseNPCSimpleChase::Attack, SimpleAttack.AttackTime, false);
 		break;
 	case EAttackPhase::Attacking:
 		AttackPhase = EAttackPhase::AfterAttack;
 		SetAttackCollision(false);
 		SetDebugAttackCollision(true);
-		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABase_NPC_SimpleChase::Attack, SimpleAttack.AfterAttackTime, false);
+		GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &ABaseNPCSimpleChase::Attack, SimpleAttack.AfterAttackTime, false);
 		break;
 	case EAttackPhase::AfterAttack:
 		AttackPhase = EAttackPhase::NotAttacking;
 		SetDebugAttackCollision(false);
 		SetTickState(false);
 		EnemyActionDelegate.Broadcast(EEnemyAction::AttackEnd, true);
+		break;
+	default:
+		break;
 	}
 }
 
-void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
+void ABaseNPCSimpleChase::JumpTo(FVector Destination)
 {
 	UE_LOG(LogTemp, Warning, TEXT("%f, %f, %f"), Destination.X, Destination.Y, Destination.Z);
 	FVector NowPos = GetActorLocation();
@@ -294,32 +285,22 @@ void ABase_NPC_SimpleChase::JumpTo(FVector Destination)
 	Velocity.Z = Destination.Z - NowPos.Z - 0.25f * JumpTime * JumpTime * MoveComp->GetGravityZ();
 	LaunchCharacter(Velocity, true, true);
 	UE_LOG(LogTemp, Warning, TEXT("%f"), MoveComp->GetGravityZ());
-	GetWorld()->GetTimerManager().SetTimer(JumpTimerHandle, this, &ABase_NPC_SimpleChase::OnEndJump, JumpTime, false);
+	GetWorld()->GetTimerManager().SetTimer(JumpTimerHandle, this, &ABaseNPCSimpleChase::OnEndJump, JumpTime, false);
 }
 
-void ABase_NPC_SimpleChase::OnEndJump()
+void ABaseNPCSimpleChase::OnEndJump()
 {
 	UE_LOG(LogTemp, Warning, TEXT("EndJump!"));
 	EnemyActionDelegate.Broadcast(EEnemyAction::JumpEnd, true);
 }
 
-void ABase_NPC_SimpleChase::PlayDeath()
+void ABaseNPCSimpleChase::PlayDeath()
 {
 	AttackTarget->OnEnemyDeath(this);
 	EnemyDeathDelegate.Broadcast();
 }
 
-class ABase_LevelController* ABase_NPC_SimpleChase::GetLevelController() const
-{
-	return LevelController;
-}
-
-class USphereComponent* ABase_NPC_SimpleChase::GetNoticeCollision() const
-{
-	return NoticeCollision;
-}
-
-void ABase_NPC_SimpleChase::SetSlowDebuff(float Mult, float Time)
+void ABaseNPCSimpleChase::SetSlowDebuff(float Mult, float Time)
 {
 	if (GetWorld()->GetTimerManager().IsTimerActive(SlowDebuffTimerHandle))
 	{
@@ -331,21 +312,18 @@ void ABase_NPC_SimpleChase::SetSlowDebuff(float Mult, float Time)
 
 		MoveComp->MaxWalkSpeed *= Mult;
 
-		//SlowDebuffEffectWidget->SetVisibility(true);
-
 		EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuff, true);
 	}
-	GetWorld()->GetTimerManager().SetTimer(SlowDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndSlowDebuff, Time, false);
+	GetWorld()->GetTimerManager().SetTimer(SlowDebuffTimerHandle, this, &ABaseNPCSimpleChase::OnEndSlowDebuff, Time, false);
 }
 
-void ABase_NPC_SimpleChase::OnEndSlowDebuff()
+void ABaseNPCSimpleChase::OnEndSlowDebuff()
 {
 	MoveComp->MaxWalkSpeed = BaseSpeed;
-	//SlowDebuffEffectWidget->SetVisibility(false);
 	EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuffEnd, true);
 }
 
-void ABase_NPC_SimpleChase::SetDamageDebuff(float Mult, float Time)
+void ABaseNPCSimpleChase::SetDamageDebuff(float Mult, float Time)
 {
 	if (GetWorld()->GetTimerManager().IsTimerActive(DamageDebuffTimerHandle))
 	{
@@ -357,21 +335,18 @@ void ABase_NPC_SimpleChase::SetDamageDebuff(float Mult, float Time)
 
 		SimpleAttack.Damage *= Mult;
 
-		//DamageDebuffEffectWidget->SetVisibility(true);
-
 		EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuff, true);
 	}
-	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABase_NPC_SimpleChase::OnEndDamageDebuff, Time, false);
+	GetWorld()->GetTimerManager().SetTimer(DamageDebuffTimerHandle, this, &ABaseNPCSimpleChase::OnEndDamageDebuff, Time, false);
 }
 
-void ABase_NPC_SimpleChase::OnEndDamageDebuff()
+void ABaseNPCSimpleChase::OnEndDamageDebuff()
 {
 	SimpleAttack.Damage = BaseDamage;
-	//DamageDebuffEffectWidget->SetVisibility(false);
 	EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuffEnd, true);
 }
 
-bool ABase_NPC_SimpleChase::PlayerHasSightOn() const
+bool ABaseNPCSimpleChase::PlayerHasSightOn() const
 {
 	if (!AttackTarget->GetController()->LineOfSightTo(this))
 	{
@@ -386,11 +361,11 @@ bool ABase_NPC_SimpleChase::PlayerHasSightOn() const
 	return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X && ScreenLocation.Y < ViewportSize.Y;
 }
 
-void ABase_NPC_SimpleChase::Unstuck()
+void ABaseNPCSimpleChase::Unstuck()
 {
 	if (PlayerHasSightOn())
 	{
-		GetWorld()->GetTimerManager().SetTimer(CheckPlayerSightTimerHandle, this, &ABase_NPC_SimpleChase::Unstuck, UnstuckPlayerSightUpdate, false);
+		GetWorld()->GetTimerManager().SetTimer(CheckPlayerSightTimerHandle, this, &ABaseNPCSimpleChase::Unstuck, UnstuckPlayerSightUpdate, false);
 		return;
 	}
 	TArray<AActor*> FoundActors;

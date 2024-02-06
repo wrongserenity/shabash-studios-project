@@ -1,12 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Base_RunDataSave.h"
-#include "Containers/SortedMap.h"
-#include "Base_LevelController.generated.h"
+#include "BaseRunDataSave.h"
+#include "BaseLevelController.generated.h"
+
+// Base class for level controller
+// Level controller provides data saving and loading, enemy spawning and difficulty settings realisation
 
 USTRUCT(BlueprintType)
 struct FScoreboardData
@@ -29,68 +29,84 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFewEnemiesRemaining);
 
 UCLASS()
-class HYPERCUBE_API ABase_LevelController : public AActor
+class HYPERCUBE_API ABaseLevelController : public AActor
 {
 	GENERATED_BODY()
-	
+
+	// Root component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* Root;
 
+	// Music component which plays exploration music
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAudioComponent* MusicComp_Explore;
+	class UAudioComponent* MusicCompExplore;
 
+	// Music component which plays low intensity battle music
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAudioComponent* MusicComp_Low;
+	class UAudioComponent* MusicCompLow;
 
+	// Music component which plays high intensity battle music layer
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAudioComponent* MusicComp_High;
+	class UAudioComponent* MusicCompHigh;
 
-public:	
-	// Sets default values for this actor's properties
-	ABase_LevelController();
+public:
+	ABaseLevelController();
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnAllEnemiesDead AllEnemiesDeadDelegate;
 
+	// Broadcasting when few enemies remaining which tells remaining enemies to chase player even if they did not notice them
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnFewEnemiesRemaining FewEnemiesRemainingDelegate;
 
+	// Name of save slot
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FString SaveSlotName;
 
+	// Array of data loaded from save file
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	TArray<FLevelData> LevelData;
 
+	// Data of current walkthrough that will be saved on level transition
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
 	FLevelData CurLevelData;
 
+	// Time between player death and level restart
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float AfterPlayerDeathTime;
 
+	// If enemy percentage drops below this, FewEnemiesRemainingDelegate will be broadcasted
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float FewEnemiesEventPercentage;
 
+	// How frequent can enemies make notice sound
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float NoticeSoundTurnOffTime;
 
+	// If enemy can make notice sound
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
 	bool bEnemyCanNoticeSound;
 
+	// How frequent can enemies make footstep sound
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float FootstepSoundTurnOffTime;
 
+	// If enemy can make footstep sound
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
 	bool bEnemyCanFootstepSound;
 
+	// How frequent can enemies make death sound
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	float DeathSoundTurnOffTime;
 
+	// If enemy can make death sound
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
 	bool bEnemyCanDeathSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	TArray<FString> LevelNames;
 
+	// Level names that are shown in scoreboard
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
 	TArray<FString> LevelNamesToShow;
 
@@ -148,15 +164,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies")
 	TArray<float> EnemyCountPercentageValues;
 
+	// Value in [0.0, 1.0], where 0.0 - no battle (exploration music), 0.5 - low intensity battle, 1.0 - high intensity battle
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Music")
 	float MusicParameter;
 
+	// How fast is music blending
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
 	float MusicChangeSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
 	float TargetMusicParameter;
 
+	// How frequent music parameter is recalculated
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
 	float MusicRefreshFrequency;
 
@@ -165,16 +184,17 @@ public:
 
 protected:
 
+	// Index of current level in LevelNames
 	int CurLevelIndex;
 
 	class AHypercubeCharacter* Player;
-	
+
 	TArray<class AActor*> SpawnPoints;
 
 	int BeginEnemyCount;
 	int EnemiesKilled;
 	int FewEnemiesEventCount;
-	TSet<class ABase_NPC_SimpleChase*> Enemies;
+	TSet<class ABaseNPCSimpleChase*> Enemies;
 
 	FTimerHandle AfterLevelTimerHandle;
 
@@ -184,7 +204,6 @@ protected:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	//virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
 
 	int GetCurMapIndex() const;
 
@@ -199,47 +218,53 @@ protected:
 	FTimerHandle DeathSoundTurnOffTimerHandle;
 	void OnEndDeathSoundTurnedOff();
 
-public:	
+public:
 
+	// Load data from save file
 	UFUNCTION(BlueprintCallable)
 	void LoadLevelData();
 
+	// Spawn enemies on spawn points
 	UFUNCTION(BlueprintCallable)
 	void SpawnEnemies();
 
 	UFUNCTION(BlueprintCallable)
-	void SpawnEnemy(class ABase_EnemySpawnPoint* SpawnPoint);
+	void SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint);
 
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter);
 
+	// Add enemy to enemy set
 	UFUNCTION(BlueprintCallable)
-	void AddEnemy(class ABase_NPC_SimpleChase* EnemyCharacter);
+	void AddEnemy(class ABaseNPCSimpleChase* EnemyCharacter);
 
+	// Called on enemy death
 	UFUNCTION(BlueprintCallable)
-	void AddEnemiesKilled();
+	void RemoveEnemy(class ABaseNPCSimpleChase* Enemy);
 
-	UFUNCTION(BlueprintCallable)
-	void RemoveEnemy(class ABase_NPC_SimpleChase* Enemy);
-
+	// Called on enemy death
 	UFUNCTION(BlueprintCallable)
 	void UpdateMaxMultiplicator(float NewMultiplicator);
 
 	UFUNCTION(BlueprintCallable)
 	void OnPlayerDeath();
 
+	// Called AfterPlayerDeathTime seconds after OnPlayerDeath()
 	UFUNCTION(BlueprintCallable)
 	void AfterPlayerDeath();
 
 	UFUNCTION(BlueprintCallable)
 	void OnAllEnemiesDead();
 
+	// Saves current level data in save file
 	UFUNCTION(BlueprintCallable)
 	void SaveLevelData();
 
+	// Clears save file
 	UFUNCTION(BlueprintCallable)
 	void ClearLevelData();
 
+	// Restart current level
 	UFUNCTION(BlueprintCallable)
 	void ReloadCurrentLevel();
 
@@ -255,6 +280,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetDeathSoundTurnOff();
 
+	// Calculate difficulty parameter
 	UFUNCTION(BlueprintCallable)
 	float GetDifficultyParameter();
 
@@ -262,10 +288,10 @@ public:
 	void SetPlayerParams();
 
 	UFUNCTION(BlueprintCallable)
-	void SetEnemyParams(class ABase_NPC_SimpleChase* Enemy);
+	void SetEnemyParams(class ABaseNPCSimpleChase* Enemy);
 
 	UFUNCTION(BlueprintCallable)
-	float GetTargetMusicParameter();
+	float GetTargetMusicParameter() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetScoreboard(int Num);
@@ -287,8 +313,9 @@ public:
 
 };
 
+// Returns 1 when array is increasing, -1 when decreasing, else 0
 template<typename T>
-int GetAsc(const TArray<T>& Arr) // returns 1 when array is increasing, -1 when decreasing, else 0
+int GetAsc(const TArray<T>& Arr)
 {
 	if (Arr.Num() < 2)
 	{
@@ -318,8 +345,9 @@ int GetAsc(const TArray<T>& Arr) // returns 1 when array is increasing, -1 when 
 	return Asc ? 1 : -1;
 }
 
+// Returns unscaled difficulty parameter from given bounds and parameter values arrays
 template<typename T>
-float GetDifficultyParameterFrom(T Val, const TArray<T>& Bounds, const TArray<float>& Values) // returns unscaled difficulty parameter from given bounds and parameter values arrays
+float GetDifficultyParameterFrom(T Val, const TArray<T>& Bounds, const TArray<float>& Values)
 {
 	if (Bounds.Num() != Values.Num())
 	{
@@ -343,8 +371,9 @@ float GetDifficultyParameterFrom(T Val, const TArray<T>& Bounds, const TArray<fl
 	return ValuesAsc ? 1.0f : 0.0f;
 }
 
+// Returns game parameter from given difficulty parameter, bounds and values arrays
 template<typename T>
-T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>& Values) // returns game parameter from given difficulty parameter, bounds and values arrays
+T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>& Values)
 {
 	if (Bounds.Num() != Values.Num())
 	{

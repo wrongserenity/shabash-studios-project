@@ -1,19 +1,18 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Base_EnemySpawnPoint.generated.h"
+#include "BaseEnemySpawnPoint.generated.h"
+
+// Base class for enemy spawn point
 
 UCLASS()
-class HYPERCUBE_API ABase_EnemySpawnPoint : public AActor
+class HYPERCUBE_API ABaseEnemySpawnPoint : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	ABase_EnemySpawnPoint();
+
+public:
+	ABaseEnemySpawnPoint();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = EnemyParameters)
 	class UClass* EnemyClass;
@@ -22,6 +21,6 @@ public:
 	float EnemySpawnHeight;
 
 	UFUNCTION(BlueprintCallable)
-	class ABase_NPC_SimpleChase* SpawnEnemy() const;
+	class ABaseNPCSimpleChase* SpawnEnemy() const;
 
 };

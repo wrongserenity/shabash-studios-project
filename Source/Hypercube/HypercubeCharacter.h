@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "HypercubeCharacter.generated.h"
 
+// Base class for player Character
+
 UENUM(BlueprintType)
 enum class EPlayerMovementPhase : uint8
 {
@@ -43,18 +45,18 @@ struct FPlayerAttackStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float OpenerTime;
 
+	// Time when attack hitbox is active
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AfterAttackTime;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float AttackMoveForwardSpeed;
-
+	// Radius of attack hitbox
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackRadius;
 
+	// Angle of attack swing
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackAngle;
 };
@@ -76,21 +78,26 @@ class AHypercubeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
+	// Capsule hitbox
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCapsuleComponent* Capsule;
 
+	// Box collision of attack
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* AttackCollision;
 
+	// Box component for attack phases debug viewing
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UBoxComponent* Debug_AttackCollision;
+	class UBoxComponent* DebugAttackCollision;
 
+	// Some mesh appearing above character when damaged
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* Debug_DamageIndicator;
+	class UStaticMeshComponent* DebugDamageIndicator;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class APlayerController* PlayerController;
 
+	// Widget of speed buff
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent* SpeedBuffEffectWidget;
 
@@ -98,7 +105,7 @@ public:
 	AHypercubeCharacter();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class ABase_LevelController* LevelController;
+	class ABaseLevelController* LevelController;
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnPlayerAction PlayerActionDelegate;
@@ -123,42 +130,54 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float MaxHealth;
 
+	// Time of invincibility after taking damage from enemy
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category =  "Stats | Health")
 	float InvincAfterDamage;
 
+	// Part of enemy HP that adds upon enemy death
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float Vampirism;
 
+	// Distance that character covers when dashing
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashDistance;
 
+	// Time that should be passed between start and end of dash
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashTime;
 
+	// Time before dash end when character gets move control back (0.0f for absence of control throughout dash)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashMoveControlTime;
 
+	// Time that should pass until character can dash again
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
 	float DashCooldownTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Score")
 	float Score;
 
+	// Base number of score earned by killing enemy (that number multiplies by damage multiplier)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Score")
 	float BaseScoreForEnemy;
 
+	// Adds to damage multiplier when one enemy starts chasing character
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplierEnemyCost;
 
+	// Time that should pass until damage multiplier starts to decrease due to decreasing target damage multiplier
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplierStaysTime;
 
+	// Speed of damage multiplier decrease (unitrs per second)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplierDecreaseSpeed;
 
+	// Current damage multiplier
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Attack | Damage Multiplying")
 	float DamageMultiplier;
 
+	// Damage multiplier that calculated as enemy chasing count multiplied by DamageMultiplierEnemyCost
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Attack | Damage Multiplying")
 	float TargetDamageMultiplier;
 
@@ -166,23 +185,31 @@ public:
 	FPlayerAttackStats SimpleAttack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bDebug;
+	bool bIsDebugOn;
 
+	// Time for which debug damage indicator becames visible
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	float Debug_DamageIndicatorTime;
+	float DebugDamageIndicatorTime;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
 	bool bIsGamePaused;
 
+	// Time for which damage FX shown
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	float DamageFXTime;
 
+	// Alpha of damage vignette
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	float DamageFXAlpha;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float CameraFovChangeSpeed;
 
+	// Fov multiplier when speed buffed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float SpeedBuffCameraFovMultiplicator;
+
+	// Percentage of UI dash bar
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	float DashBarPercentage;
 
@@ -198,7 +225,7 @@ protected:
 	class UInputComponent* InputComp;
 
 	bool bCanDash;
-	bool bDashMovementBlocked;
+	bool bIsDashMovementBlocked;
 	FVector DashDestination;
 	float DashTimer;
 	float DashCooldownTimer;
@@ -212,13 +239,15 @@ protected:
 
 	FTimerHandle AttackTimerHandle;
 
-	TSet<class ABase_NPC_SimpleChase*> AttackEnemiesCollided;
+	// Set of enemies that were collided with current attack
+	TSet<class ABaseNPCSimpleChase*> AttackEnemiesCollided;
 
-	TSet<class ABase_NPC_SimpleChase*> EnemyChasing;
+	// Set of enemies that are chasing player
+	TSet<class ABaseNPCSimpleChase*> EnemyChasing;
 
 	float DamageFXTimer;
 
-	FTimerHandle Debug_DamageIndicatorTimerHandle;
+	FTimerHandle DebugDamageIndicatorTimerHandle;
 
 	float BaseSpeed;
 	float BaseJumpVelocity;
@@ -228,25 +257,34 @@ protected:
 
 protected:
 
-	//FTimerHandle DelayedInitTimerHandle;
-	//float DelayedInitTime;
-	//void DelayedInit();
-
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
-	inline float DashVelocityCurve(float x); // f(x) where int_0^1(f(x))dx = 1
-	inline float DamageFXCurve(float x);
+	// f(x) where int_0^1(f(x))dx = 1 that defines dash velocity value during dash time
+	static inline float DashVelocityCurve(float x);
+
+	// [0, 1] -> [0, 1] function that defines alpha of damage FX vignette on time
+	static inline float DamageFXCurve(float x); 
+
+	// On end of invincibility after damage
+	void OnEndInvincibility();
+
+	void UpdateDamageMultiplier();
+	void OnEndDamageMultiplierStays();
 
 	void Dash();
 	void AllowMovingWhileDash();
 	void StopDashing();
 	void OnEndDashCooldown();
 
-	void SetAttackCollision(bool Activate);
-	void SetDebugAttackCollision(bool Activate);
+	void SetAttackCollision(bool bToActivate);
+	void SetDebugAttackCollision(bool bToActivate);
+
+	// Execute simple attack
 	void Attack();
 	void OnEndAttack();
+
+	void OnEndSpeedBuff();
 
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
@@ -259,39 +297,22 @@ protected:
 	void AttackTick();
 
 public:
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE class ABaseLevelController* GetLevelController() const { return LevelController; }
 
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
 
-	void OnEndInvincibility();
-
+	// Called when health is below zero
 	UFUNCTION(BlueprintCallable)
 	void PlayDeath();
 
 	UFUNCTION(BlueprintCallable)
-	void UpdateDamageMultiplier();
-
-	UFUNCTION(BlueprintCallable)
-	void OnEndDamageMultiplierStays();
-
-	UFUNCTION(BlueprintCallable)
-	void OnEnemyAggro(class ABase_NPC_SimpleChase* Enemy);
-
-	UFUNCTION(BlueprintCallable)
-	void OnEnemyDeath(class ABase_NPC_SimpleChase* Enemy);
-
-	UFUNCTION(BlueprintCallable)
-	void SetMouseCursorShow(bool Activate);
+	void SetMouseCursorShow(bool bToShow);
 
 	UFUNCTION(BlueprintCallable)
 	void Pause();
-
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	class ABase_LevelController* GetLevelController() const;
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveAttackInput();
@@ -302,6 +323,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetSpeedBuff(float SpeedMult, float JumpMult, float Time);
 
-	void OnEndSpeedBuff();
-};
+	void OnEnemyAggro(class ABaseNPCSimpleChase* Enemy);
 
+	void OnEnemyDeath(class ABaseNPCSimpleChase* Enemy);
+};
