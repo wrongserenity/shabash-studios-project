@@ -160,7 +160,7 @@ void ABaseNPCSimpleChase::Tick(float DeltaSeconds)
 	}
 	if (HealRemaining > 0.0f)
 	{
-		HealTick(DeltaSeconds);
+		TickHeal(DeltaSeconds);
 	}
 	Super::Tick(DeltaSeconds);
 }
@@ -178,8 +178,7 @@ void ABaseNPCSimpleChase::TickMoveForward(float DeltaSeconds)
 	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds, true);
 }
 
-
-void ABaseNPCSimpleChase::HealTick(float DeltaSeconds)
+void ABaseNPCSimpleChase::TickHeal(float DeltaSeconds)
 {
 	float ToHeal = HealSpeed * DeltaSeconds;
 

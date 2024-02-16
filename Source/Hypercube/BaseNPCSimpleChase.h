@@ -204,7 +204,7 @@ protected:
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
 
-	void HealTick(float DeltaSeconds);
+	void TickHeal(float DeltaSeconds);
 
 	void AfterNotice();
 	
