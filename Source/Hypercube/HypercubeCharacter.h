@@ -255,6 +255,10 @@ protected:
 	float TargetCameraFov;
 	FTimerHandle SpeedBuffTimerHandle;
 
+	float HealSpeed;
+	float HealRemaining;
+	FTimerHandle HealBuffTimerHandle;
+
 protected:
 
 	void MoveForward(float Value);
@@ -285,6 +289,8 @@ protected:
 	void OnEndAttack();
 
 	void OnEndSpeedBuff();
+
+	void OnEndHealBuff();
 
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
@@ -322,6 +328,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetSpeedBuff(float SpeedMult, float JumpMult, float Time);
+
+	UFUNCTION(BlueprintCallable)
+	void SetHealBuff(float Heal, float Time);
 
 	void OnEnemyAggro(class ABaseNPCSimpleChase* Enemy);
 

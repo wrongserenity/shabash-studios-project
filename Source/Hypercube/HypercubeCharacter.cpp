@@ -64,6 +64,8 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Vampirism = 0.0f;
 	bIsInvincible = false;
 
+	HealSpeed = HealRemaining = 0.0f;
+
 	DashDistance = 700.0f;
 	DashTime = DashTimer = 0.2f;
 	DashMoveControlTime = 0.1f;
@@ -213,6 +215,33 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 		if (FMath::IsNearlyEqual(FollowCamera->FieldOfView, TargetCameraFov, 0.001f))
 		{
 			FollowCamera->FieldOfView = TargetCameraFov;
+		}
+	}
+	if (HealRemaining > 0.0f)
+	{
+		float ToHeal = HealSpeed * DeltaSeconds;
+
+		if (ToHeal < HealRemaining)
+		{
+			HealRemaining -= ToHeal;
+			Health += ToHeal;
+
+			if (Health > MaxHealth)
+			{
+				Health = MaxHealth;
+			}
+		}
+		else
+		{
+			HealRemaining = 0.0f;
+			Health += HealRemaining;
+
+			if (Health > MaxHealth)
+			{
+				Health = MaxHealth;
+			}
+
+			OnEndHealBuff();
 		}
 	}
 	Super::Tick(DeltaSeconds);
@@ -579,4 +608,15 @@ void AHypercubeCharacter::OnEndSpeedBuff()
 	MoveComp->JumpZVelocity = BaseJumpVelocity;
 	TargetCameraFov = BaseCameraFov;
 	SpeedBuffEffectWidget->SetVisibility(false);
+}
+
+void AHypercubeCharacter::SetHealBuff(float Heal, float Time)
+{
+	HealRemaining = Heal;
+	HealSpeed = Heal / Time;
+}
+
+void AHypercubeCharacter::OnEndHealBuff()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Player Healing Ends!"));
 }

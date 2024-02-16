@@ -83,6 +83,8 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	LevelingType = EEnemyLevelingType::None;
 
 	BaseSpeed = BaseDamage = 0.0f;
+
+	HealSpeed = HealRemaining = 0.0f;
 }
 
 void ABaseNPCSimpleChase::BeginPlay()
@@ -156,6 +158,10 @@ void ABaseNPCSimpleChase::Tick(float DeltaSeconds)
 	{
 		TickRotateToTarget(DeltaSeconds);
 	}
+	if (HealRemaining > 0.0f)
+	{
+		HealTick(DeltaSeconds);
+	}
 	Super::Tick(DeltaSeconds);
 }
 
@@ -170,6 +176,35 @@ void ABaseNPCSimpleChase::TickRotateToTarget(float DeltaSeconds)
 void ABaseNPCSimpleChase::TickMoveForward(float DeltaSeconds)
 {
 	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds, true);
+}
+
+
+void ABaseNPCSimpleChase::HealTick(float DeltaSeconds)
+{
+	float ToHeal = HealSpeed * DeltaSeconds;
+
+	if (ToHeal < HealRemaining)
+	{
+		HealRemaining -= ToHeal;
+		Health += ToHeal;
+
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+	}
+	else
+	{
+		HealRemaining = 0.0f;
+		Health += HealRemaining;
+
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		OnEndHealBuff();
+	}
 }
 
 void ABaseNPCSimpleChase::CheckPlayerHit()
@@ -351,6 +386,19 @@ void ABaseNPCSimpleChase::OnEndDamageDebuff()
 	SimpleAttack.Damage = BaseDamage;
 	BaseDamage = 0.0f;
 	EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuffEnd, true);
+}
+
+void ABaseNPCSimpleChase::SetHealBuff(float Heal, float Time)
+{
+	HealRemaining = Heal;
+	HealSpeed = Heal / Time;
+	SetTickState(true);
+}
+
+void ABaseNPCSimpleChase::OnEndHealBuff()
+{
+	SetTickState(false);
+	UE_LOG(LogTemp, Warning, TEXT("Enemy Healing Ends!"));
 }
 
 bool ABaseNPCSimpleChase::PlayerHasSightOn() const

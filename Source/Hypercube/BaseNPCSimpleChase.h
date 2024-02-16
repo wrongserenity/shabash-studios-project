@@ -204,6 +204,8 @@ protected:
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
 
+	void HealTick(float DeltaSeconds);
+
 	void AfterNotice();
 	
 	void SetAttackCollision(bool bToActivate);
@@ -223,6 +225,10 @@ protected:
 	FTimerHandle DamageDebuffTimerHandle;
 	float BaseDamage;
 	void OnEndDamageDebuff();
+
+	float HealRemaining;
+	float HealSpeed;
+	void OnEndHealBuff();
 
 	void ResetLevel();
 
@@ -258,6 +264,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetDamageDebuff(float Mult, float Time);
+
+	UFUNCTION(BlueprintCallable)
+	void SetHealBuff(float Heal, float Time);
 
 	// True if player camera has sight on this NPC
 	UFUNCTION(BlueprintCallable, BlueprintPure)
