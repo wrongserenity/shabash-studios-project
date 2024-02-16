@@ -65,6 +65,7 @@ ABaseLevelController::ABaseLevelController()
 	EnemyDamageValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f, 1.5f };
 	EnemyNoticeRadiusValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f };
 	EnemyCountPercentageValues = { 0.3f, 0.3f, 0.7f, 0.7f, 1.0f, 1.0f, 1.0f };
+	EnemyLevelingPercentageValues = { 0.3f, 0.3f, 0.3f, 0.5f, 0.5f, 0.5f, 0.5f };
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
@@ -95,6 +96,7 @@ void ABaseLevelController::BeginPlay()
 	}
 	LoadLevelData();
 	DifficultyParameter = GetDifficultyParameter();
+	EnemyLevelingPercentage = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyLevelingPercentageValues);
 	SpawnEnemies();
 	MusicCompExplore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicCompLow->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
@@ -124,6 +126,7 @@ void ABaseLevelController::Tick(float DeltaSeconds)
 		MusicCompLow->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicCompHigh->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	}
+	Super::Tick(DeltaSeconds);
 }
 
 int ABaseLevelController::GetCurMapIndex() const
@@ -199,9 +202,9 @@ void ABaseLevelController::SpawnEnemies()
 	}
 }
 
-void ABaseLevelController::SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint)
+void ABaseLevelController::SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint, EEnemyLevel Level, EEnemyLevelingType LevelingType)
 {
-	ABaseNPCSimpleChase* Enemy = SpawnPoint->SpawnEnemy();
+	ABaseNPCSimpleChase* Enemy = SpawnPoint->SpawnEnemy(Level, LevelingType);
 	if (Enemy)
 	{
 		Enemy->LevelController = this;
@@ -492,6 +495,8 @@ FString ABaseLevelController::GetDifficultyBrief() const
 	Result += FString("\nNotice radius: x") + FloatToFString(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyNoticeRadiusValues));
 	Result += FString("\nEnemy Count: ");
 	Result.AppendInt(int(GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyCountPercentageValues) * 100.0f));
+	Result += FString("%\nEnemy Leveling: ");
+	Result.AppendInt(int(EnemyLevelingPercentage * 100.0f));
 	Result.AppendChar('%');
 	return Result;
 }

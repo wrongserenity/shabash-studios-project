@@ -78,6 +78,11 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	DebugDamageIndicatorTime = 3.0f;
 
 	bIsDebugOn = false;
+
+	Level = EEnemyLevel::Level0;
+	LevelingType = EEnemyLevelingType::None;
+
+	BaseSpeed = BaseDamage = 0.0f;
 }
 
 void ABaseNPCSimpleChase::BeginPlay()
@@ -320,6 +325,7 @@ void ABaseNPCSimpleChase::SetSlowDebuff(float Mult, float Time)
 void ABaseNPCSimpleChase::OnEndSlowDebuff()
 {
 	MoveComp->MaxWalkSpeed = BaseSpeed;
+	BaseSpeed = 0.0f;
 	EnemyActionDelegate.Broadcast(EEnemyAction::SlowDebuffEnd, true);
 }
 
@@ -343,6 +349,7 @@ void ABaseNPCSimpleChase::SetDamageDebuff(float Mult, float Time)
 void ABaseNPCSimpleChase::OnEndDamageDebuff()
 {
 	SimpleAttack.Damage = BaseDamage;
+	BaseDamage = 0.0f;
 	EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuffEnd, true);
 }
 
@@ -387,3 +394,76 @@ void ABaseNPCSimpleChase::Unstuck()
 	}
 	EnemyActionDelegate.Broadcast(EEnemyAction::UnstuckEnd, false);
 }
+
+float ABaseNPCSimpleChase::GetStatMultiplier() const
+{
+	switch (Level)
+	{
+	case EEnemyLevel::Level0:
+		return 1.0f;
+	case EEnemyLevel::Level1:
+		return 1.0f + LevelController->GetEnemyLevelingPercentage();
+	case EEnemyLevel::Level2:
+		return 1.0f + 2.0f * LevelController->GetEnemyLevelingPercentage();
+	case EEnemyLevel::Level3:
+		return 1.0f + 3.0f * LevelController->GetEnemyLevelingPercentage();
+	default:
+		return 1.0f;
+	}
+}
+
+void ABaseNPCSimpleChase::ResetLevel()
+{
+	switch (LevelingType)
+	{
+	case EEnemyLevelingType::Speed:
+		MoveComp->MaxWalkSpeed /= GetStatMultiplier();
+		BaseSpeed /= GetStatMultiplier();
+		break;
+	case EEnemyLevelingType::Damage:
+		SimpleAttack.Damage /= GetStatMultiplier();
+		BaseDamage /= GetStatMultiplier();
+		break;
+	case EEnemyLevelingType::Health:
+		Health = (MaxHealth /= GetStatMultiplier());
+		break;
+	default:
+		break;
+	}
+
+	LevelingType = EEnemyLevelingType::None;
+	Level = EEnemyLevel::Level0;
+}
+
+void ABaseNPCSimpleChase::SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewLevelingType)
+{
+	if (Level == NewLevel && LevelingType == NewLevelingType)
+	{
+		return;
+	}
+
+	ResetLevel();
+
+	Level = NewLevel;
+	LevelingType = NewLevelingType;
+
+	switch (LevelingType)
+	{
+	case EEnemyLevelingType::Speed:
+		GetCharacterMovement()->MaxWalkSpeed *= GetStatMultiplier();
+		BaseSpeed *= GetStatMultiplier();
+		break;
+	case EEnemyLevelingType::Damage:
+		SimpleAttack.Damage *= GetStatMultiplier();
+		BaseDamage *= GetStatMultiplier();
+		break;
+	case EEnemyLevelingType::Health:
+		Health = (MaxHealth *= GetStatMultiplier());
+		break;
+	default:
+		break;
+	}
+
+	EnemyActionDelegate.Broadcast(EEnemyAction::LevelUpdate, true);
+}
+

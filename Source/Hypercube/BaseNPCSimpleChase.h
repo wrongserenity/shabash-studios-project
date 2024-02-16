@@ -65,7 +65,26 @@ enum class EEnemyAction : uint8
 	SlowDebuff UMETA(DisplayName = "SlowDebuff"),
 	SlowDebuffEnd UMETA(DisplayName = "SlowDebuffEnd"),
 	DamageDecreaseDebuff UMETA(DisplayName = "AttackDecreaseDebuff"),
-	DamageDecreaseDebuffEnd UMETA(DisplayName = "AttackDecreaseDebuffEnd")
+	DamageDecreaseDebuffEnd UMETA(DisplayName = "AttackDecreaseDebuffEnd"),
+	LevelUpdate UMETA(DisplayName = "LevelUpdate")
+};
+
+UENUM(BlueprintType)
+enum class EEnemyLevel : uint8
+{
+	Level0 UMETA(DisplayName = "Level0"),
+	Level1 UMETA(DisplayName = "Level1"),
+	Level2 UMETA(DisplayName = "Level2"),
+	Level3 UMETA(DisplayName = "Level3")
+};
+
+UENUM(BlueprintType)
+enum class EEnemyLevelingType : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Speed UMETA(DisplayName = "Speed"),
+	Damage UMETA(DisplayName = "Damage"),
+	Health UMETA(DisplayName = "Health")
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
@@ -149,6 +168,14 @@ public:
 
 protected:
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Leveling", meta = (AllowPrivateAccess = "true"))
+	EEnemyLevel Level;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Leveling", meta = (AllowPrivateAccess = "true"))
+	EEnemyLevelingType LevelingType;
+
+protected:
+
 	// Semaphore that controls Tick() usage
 	uint8 TickSemaphore;
 
@@ -197,6 +224,8 @@ protected:
 	float BaseDamage;
 	void OnEndDamageDebuff();
 
+	void ResetLevel();
+
 	FTimerHandle CheckPlayerSightTimerHandle;
 
 public:
@@ -237,4 +266,11 @@ public:
 	// Called when NPC is stuck and player is not seeing it. Teleports NPC near plauyer out of his sight
 	UFUNCTION(BlueprintCallable)
 	void Unstuck();
+
+	// Get stat multiplier according to enemy level
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetStatMultiplier() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewLevelingType);
 };

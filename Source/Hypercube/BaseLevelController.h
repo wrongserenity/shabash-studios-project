@@ -3,10 +3,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BaseRunDataSave.h"
+#include "BaseNPCSimpleChase.h"
 #include "BaseLevelController.generated.h"
 
 // Base class for level controller
-// Level controller provides data saving and loading, enemy spawning and difficulty settings realisation
+// Level controller provides data saving and loading, enemy spawning, difficulty settings realisation and dynamic music
 
 USTRUCT(BlueprintType)
 struct FScoreboardData
@@ -50,6 +51,7 @@ class HYPERCUBE_API ABaseLevelController : public AActor
 	class UAudioComponent* MusicCompHigh;
 
 public:
+
 	ABaseLevelController();
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
@@ -59,127 +61,136 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnFewEnemiesRemaining FewEnemiesRemainingDelegate;
 
+protected:
+
 	// Name of save slot
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame, meta = (AllowPrivateAccess = "true"));
 	FString SaveSlotName;
 
 	// Array of data loaded from save file
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame, meta = (AllowPrivateAccess = "true"))
 	TArray<FLevelData> LevelData;
 
 	// Data of current walkthrough that will be saved on level transition
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SaveGame, meta = (AllowPrivateAccess = "true"))
 	FLevelData CurLevelData;
 
 	// Time between player death and level restart
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float AfterPlayerDeathTime;
 
 	// If enemy percentage drops below this, FewEnemiesRemainingDelegate will be broadcasted
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float FewEnemiesEventPercentage;
 
-	// How frequent can enemies make notice sound
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	float NoticeSoundTurnOffTime;
+	// Defines enemy stats increasing 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float EnemyLevelingPercentage;
 
-	// If enemy can make notice sound
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
-	bool bEnemyCanNoticeSound;
-
-	// How frequent can enemies make footstep sound
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	float FootstepSoundTurnOffTime;
-
-	// If enemy can make footstep sound
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
-	bool bEnemyCanFootstepSound;
-
-	// How frequent can enemies make death sound
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
-	float DeathSoundTurnOffTime;
-
-	// If enemy can make death sound
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)
-	bool bEnemyCanDeathSound;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	TArray<FString> LevelNames;
 
 	// Level names that are shown in scoreboard
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	TArray<FString> LevelNamesToShow;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
+	// How frequent can enemies make notice sound
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Sound", meta = (AllowPrivateAccess = "true"))
+	float NoticeSoundTurnOffTime;
+
+	// If enemy can make notice sound
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Sound", meta = (AllowPrivateAccess = "true"))
+	bool bEnemyCanNoticeSound;
+
+	// How frequent can enemies make footstep sound
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Sound", meta = (AllowPrivateAccess = "true"))
+	float FootstepSoundTurnOffTime;
+
+	// If enemy can make footstep sound
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Sound", meta = (AllowPrivateAccess = "true"))
+	bool bEnemyCanFootstepSound;
+
+	// How frequent can enemies make death sound
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Sound", meta = (AllowPrivateAccess = "true"))
+	float DeathSoundTurnOffTime;
+
+	// If enemy can make death sound
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Sound", meta = (AllowPrivateAccess = "true"))
+	bool bEnemyCanDeathSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count", meta = (AllowPrivateAccess = "true"))
 	TArray<int> DeathCountBounds;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count", meta = (AllowPrivateAccess = "true"))
 	TArray<float> DeathCountValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Death count", meta = (AllowPrivateAccess = "true"))
 	float DeathCountCost;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Enemy aggro on death")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Enemy aggro on death", meta = (AllowPrivateAccess = "true"))
 	TArray<int> OnDeathEnemyAggroBounds;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Enemy aggro on death")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Enemy aggro on death", meta = (AllowPrivateAccess = "true"))
 	TArray<float> OnDeathEnemyAggroValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Enemy aggro on death")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Enemy aggro on death", meta = (AllowPrivateAccess = "true"))
 	float OnDeathEnemyAggroCost;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Play time")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Play time", meta = (AllowPrivateAccess = "true"))
 	TArray<float> PlayTimeBounds;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Play time")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Play time", meta = (AllowPrivateAccess = "true"))
 	TArray<float> PlayTimeValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Play time")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Input data | Play time", meta = (AllowPrivateAccess = "true"))
 	float PlayTimeCost;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adaptive difficulty | Output parameters")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adaptive difficulty | Output parameters", meta = (AllowPrivateAccess = "true"))
 	float DifficultyParameter;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters", meta = (AllowPrivateAccess = "true"))
 	TArray<float> DifficultyParameterBounds;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Player")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Player", meta = (AllowPrivateAccess = "true"))
 	TArray<float> PlayerVelocityValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Player")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Player", meta = (AllowPrivateAccess = "true"))
 	TArray<float> PlayerDamageMultiplerValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Player")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Player", meta = (AllowPrivateAccess = "true"))
 	TArray<float> PlayerVampirismValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies", meta = (AllowPrivateAccess = "true"))
 	TArray<float> EnemyVelocityValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies", meta = (AllowPrivateAccess = "true"))
 	TArray<float> EnemyDamageValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies", meta = (AllowPrivateAccess = "true"))
 	TArray<float> EnemyNoticeRadiusValues;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies", meta = (AllowPrivateAccess = "true"))
 	TArray<float> EnemyCountPercentageValues;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Adaptive difficulty | Output parameters | Enemies", meta = (AllowPrivateAccess = "true"))
+	TArray<float> EnemyLevelingPercentageValues;
+
 	// Value in [0.0, 1.0], where 0.0 - no battle (exploration music), 0.5 - low intensity battle, 1.0 - high intensity battle
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Music")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Music)
 	float MusicParameter;
 
 	// How fast is music blending
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
 	float MusicChangeSpeed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
 	float TargetMusicParameter;
 
 	// How frequent music parameter is recalculated
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
 	float MusicRefreshFrequency;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Music")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
 	float MusicVolumeMultiplier;
 
 protected:
@@ -229,7 +240,7 @@ public:
 	void SpawnEnemies();
 
 	UFUNCTION(BlueprintCallable)
-	void SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint);
+	void SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint, EEnemyLevel Level = EEnemyLevel::Level0, EEnemyLevelingType LevelingType = EEnemyLevelingType::None);
 
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter);
@@ -310,6 +321,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetDifficultyBrief() const;
+
+	FORCEINLINE float GetEnemyLevelingPercentage() { return EnemyLevelingPercentage; }
 
 };
 
