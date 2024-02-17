@@ -534,6 +534,12 @@ void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
 	}
 }
 
+void AHypercubeCharacter::RemoveEnemyChasing(ABaseNPCSimpleChase* Enemy)
+{
+	EnemyChasing.Remove(Enemy);
+	UpdateDamageMultiplier();
+}
+
 void AHypercubeCharacter::SetMouseCursorShow(bool bToShow)
 {
 	PlayerController->bShowMouseCursor = bToShow;

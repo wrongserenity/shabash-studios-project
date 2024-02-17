@@ -79,7 +79,7 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 
 	bIsDebugOn = false;
 
-	Level = EEnemyLevel::Level0;
+	Level = 0;
 	LevelingType = EEnemyLevelingType::None;
 
 	BaseSpeed = BaseDamage = 0.0f;
@@ -452,36 +452,12 @@ void ABaseNPCSimpleChase::Unstuck()
 
 float ABaseNPCSimpleChase::GetStatMultiplier() const
 {
-	switch (Level)
-	{
-	case EEnemyLevel::Level0:
-		return 1.0f;
-	case EEnemyLevel::Level1:
-		return 1.0f + LevelController->GetEnemyLevelingPercentage();
-	case EEnemyLevel::Level2:
-		return 1.0f + 2.0f * LevelController->GetEnemyLevelingPercentage();
-	case EEnemyLevel::Level3:
-		return 1.0f + 3.0f * LevelController->GetEnemyLevelingPercentage();
-	default:
-		return 1.0f;
-	}
+	return 1.0f + float(Level) * LevelController->GetEnemyLevelingPercentage();
 }
 
 float ABaseNPCSimpleChase::GetDamageMultiplierMultiplier() const
 {
-	switch (Level)
-	{
-	case EEnemyLevel::Level0:
-		return 1.0f;
-	case EEnemyLevel::Level1:
-		return 2.0f;
-	case EEnemyLevel::Level2:
-		return 3.0f;
-	case EEnemyLevel::Level3:
-		return 4.0f;
-	default:
-		return 1.0f;
-	}
+	return 1.0f + float(Level);
 }
 
 void ABaseNPCSimpleChase::ResetLevel()
@@ -504,11 +480,17 @@ void ABaseNPCSimpleChase::ResetLevel()
 	}
 
 	LevelingType = EEnemyLevelingType::None;
-	Level = EEnemyLevel::Level0;
+	Level = 0;
 }
 
-void ABaseNPCSimpleChase::SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewLevelingType)
+void ABaseNPCSimpleChase::SetLevel(int NewLevel, EEnemyLevelingType NewLevelingType)
 {
+	if (Level < 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trying to assign negative level to an enemy!"));
+		return;
+	}
+
 	if (Level == NewLevel && LevelingType == NewLevelingType)
 	{
 		return;
@@ -541,3 +523,30 @@ void ABaseNPCSimpleChase::SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewL
 	EnemyActionDelegate.Broadcast(EEnemyAction::LevelUpdate, true);
 }
 
+void ABaseNPCSimpleChase::IncreaseLevel(int ToIncrease)
+{
+	if (ToIncrease <= 0)
+	{
+		return;
+	}
+
+	if (!Level)
+	{
+		switch (FMath::RandRange(0, 2))
+		{
+		case 0:
+			LevelingType = EEnemyLevelingType::Speed;
+			break;
+		case 1:
+			LevelingType = EEnemyLevelingType::Damage;
+			break;
+		case 2:
+			LevelingType = EEnemyLevelingType::Health;
+			break;
+		default:
+			break;
+		}
+	}
+
+	SetLevel(Level + ToIncrease, LevelingType);
+}

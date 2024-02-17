@@ -73,15 +73,6 @@ enum class EEnemyAction : uint8
 };
 
 UENUM(BlueprintType)
-enum class EEnemyLevel : uint8
-{
-	Level0 UMETA(DisplayName = "Level0"),
-	Level1 UMETA(DisplayName = "Level1"),
-	Level2 UMETA(DisplayName = "Level2"),
-	Level3 UMETA(DisplayName = "Level3")
-};
-
-UENUM(BlueprintType)
 enum class EEnemyLevelingType : uint8
 {
 	None UMETA(DisplayName = "None"),
@@ -176,7 +167,7 @@ public:
 protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Leveling", meta = (AllowPrivateAccess = "true"))
-	EEnemyLevel Level;
+	int Level;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Leveling", meta = (AllowPrivateAccess = "true"))
 	EEnemyLevelingType LevelingType;
@@ -250,6 +241,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE class USphereComponent* GetNoticeCollision() const { return NoticeCollision; }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE int GetEnemyLevel() const { return Level; }
+
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
 
@@ -293,5 +287,8 @@ public:
 	float GetDamageMultiplierMultiplier() const;
 
 	UFUNCTION(BlueprintCallable)
-	void SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewLevelingType);
+	void SetLevel(int NewLevel, EEnemyLevelingType NewLevelingType);
+
+	UFUNCTION(BlueprintCallable)
+	void IncreaseLevel(int ToIncrease);
 };

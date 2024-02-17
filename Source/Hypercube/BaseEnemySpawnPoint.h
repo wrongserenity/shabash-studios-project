@@ -25,6 +25,6 @@ public:
 	ABaseEnemySpawnPoint();
 
 	UFUNCTION(BlueprintCallable)
-	class ABaseNPCSimpleChase* SpawnEnemy(EEnemyLevel Level = EEnemyLevel::Level0, EEnemyLevelingType LevelingType = EEnemyLevelingType::None) const;
+	class ABaseNPCSimpleChase* SpawnEnemy(int Level = 0, EEnemyLevelingType LevelingType = EEnemyLevelingType::None) const;
 
 };

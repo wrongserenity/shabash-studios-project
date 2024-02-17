@@ -346,4 +346,7 @@ public:
 	void OnEnemyAggro(class ABaseNPCSimpleChase* Enemy);
 
 	void OnEnemyDeath(class ABaseNPCSimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveEnemyChasing(class ABaseNPCSimpleChase* Enemy);
 };

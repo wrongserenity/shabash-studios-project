@@ -202,7 +202,7 @@ void ABaseLevelController::SpawnEnemies()
 	}
 }
 
-void ABaseLevelController::SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint, EEnemyLevel Level, EEnemyLevelingType LevelingType)
+void ABaseLevelController::SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint, int Level, EEnemyLevelingType LevelingType)
 {
 	ABaseNPCSimpleChase* Enemy = SpawnPoint->SpawnEnemy(Level, LevelingType);
 	if (Enemy)
@@ -396,6 +396,26 @@ float ABaseLevelController::GetTargetMusicParameter() const
 		return 0.5f;
 	}
 	return 1.0f;
+}
+
+void ABaseLevelController::StackEnemies(ABaseNPCSimpleChase* Enemy1, ABaseNPCSimpleChase* Enemy2)
+{
+	if (Enemy1 == Enemy2)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trying to stack enemy with itself!"));
+		return;
+	}
+
+	ABaseNPCSimpleChase* LowEnemy = Enemy1->GetEnemyLevel() < Enemy2->GetEnemyLevel() ? Enemy1 : Enemy2;
+	ABaseNPCSimpleChase* HighEnemy = LowEnemy == Enemy1 ? Enemy2 : Enemy1;
+
+	HighEnemy->IncreaseLevel(LowEnemy->GetEnemyLevel() + 1);
+	HighEnemy->Health = HighEnemy->MaxHealth;
+
+	Player->RemoveEnemyChasing(LowEnemy);
+	RemoveEnemy(LowEnemy);
+
+	LowEnemy->Destroy();
 }
 
 FString ABaseLevelController::GetScoreboard(int Num)

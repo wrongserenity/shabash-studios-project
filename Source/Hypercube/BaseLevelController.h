@@ -240,7 +240,7 @@ public:
 	void SpawnEnemies();
 
 	UFUNCTION(BlueprintCallable)
-	void SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint, EEnemyLevel Level = EEnemyLevel::Level0, EEnemyLevelingType LevelingType = EEnemyLevelingType::None);
+	void SpawnEnemy(class ABaseEnemySpawnPoint* SpawnPoint, int Level = 0, EEnemyLevelingType LevelingType = EEnemyLevelingType::None);
 
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerCharacter(class AHypercubeCharacter* PlayerCharacter);
@@ -304,6 +304,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	float GetTargetMusicParameter() const;
 
+	UFUNCTION(BlueprintCallable)
+	void StackEnemies(class ABaseNPCSimpleChase* Enemy1, class ABaseNPCSimpleChase* Enemy2);
+
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetScoreboard(int Num);
 
@@ -322,8 +325,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetDifficultyBrief() const;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE float GetEnemyLevelingPercentage() { return EnemyLevelingPercentage; }
-
 };
 
 // Returns 1 when array is increasing, -1 when decreasing, else 0
