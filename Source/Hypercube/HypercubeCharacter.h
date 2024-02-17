@@ -31,7 +31,10 @@ enum class EPlayerAction : uint8
 {
 	Attack UMETA(DisplayName = "Attack"),
 	Dash UMETA(DisplayName = "Dash"),
-	Damaged UMETA(DisplayName = "Damaged")
+	Damaged UMETA(DisplayName = "Damaged"),
+	HealBuff UMETA(DisplayName = "HealBuff"),
+	HealBurst UMETA(DisplayName = "HealBurst"),
+	HealBuffEnd UMETA(DisplayName = "HealBuffEnd")
 };
 
 USTRUCT(BlueprintType)
@@ -137,6 +140,10 @@ public:
 	// Part of enemy HP that adds upon enemy death
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float Vampirism;
+
+	// Time between heal bursts while healing
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float HealBurstTimeBetween;
 
 	// Distance that character covers when dashing
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
@@ -255,7 +262,8 @@ protected:
 	float TargetCameraFov;
 	FTimerHandle SpeedBuffTimerHandle;
 
-	float HealSpeed;
+	bool bIsHealing;
+	float HealPerBurst; 
 	float HealRemaining;
 	FTimerHandle HealBuffTimerHandle;
 
@@ -273,7 +281,6 @@ protected:
 	// On end of invincibility after damage
 	void OnEndInvincibility();
 
-	void UpdateDamageMultiplier();
 	void OnEndDamageMultiplierStays();
 
 	void Dash();
@@ -290,6 +297,7 @@ protected:
 
 	void OnEndSpeedBuff();
 
+	void HealBurst();
 	void OnEndHealBuff();
 
 	void ActivateDebugDamageIndicator();
@@ -307,6 +315,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE class ABaseLevelController* GetLevelController() const { return LevelController; }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE int GetEnemyChasingCount() const { return EnemyChasing.Num(); }
+
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
 
@@ -323,14 +334,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ReceiveAttackInput();
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	int GetEnemyChasingCount() const;
-
 	UFUNCTION(BlueprintCallable)
 	void SetSpeedBuff(float SpeedMult, float JumpMult, float Time);
 
 	UFUNCTION(BlueprintCallable)
-	void SetHealBuff(float Heal, float Time);
+	void SetHealBuff(float Heal, int BurstCount);
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateDamageMultiplier();
 
 	void OnEnemyAggro(class ABaseNPCSimpleChase* Enemy);
 

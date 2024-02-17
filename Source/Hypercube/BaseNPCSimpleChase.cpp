@@ -62,7 +62,7 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 
 	MovePhase = EEnemyPhase::None;
 	AttackPhase = EAttackPhase::NotAttacking;
-	AttackTarget = nullptr;
+	Player = nullptr;
 
 	UnstuckPlayerSightUpdate = 0.2f;
 	UnstuckAroundPlayerRadius = 1000.0f;
@@ -84,7 +84,9 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 
 	BaseSpeed = BaseDamage = 0.0f;
 
-	HealSpeed = HealRemaining = 0.0f;
+	HealRemaining = 0.0f;
+	HealBurstTimeBetween = 1.0f;
+	bIsHealing = false;
 }
 
 void ABaseNPCSimpleChase::BeginPlay()
@@ -95,7 +97,7 @@ void ABaseNPCSimpleChase::BeginPlay()
 
 void ABaseNPCSimpleChase::DelayedInit()
 {
-	AttackTarget = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	Player = Cast<AHypercubeCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	NoticeCollision->SetGenerateOverlapEvents(true);
 	TickSemaphore = 0;
 	SetActorTickEnabled(false);
@@ -158,16 +160,12 @@ void ABaseNPCSimpleChase::Tick(float DeltaSeconds)
 	{
 		TickRotateToTarget(DeltaSeconds);
 	}
-	if (HealRemaining > 0.0f)
-	{
-		TickHeal(DeltaSeconds);
-	}
 	Super::Tick(DeltaSeconds);
 }
 
 void ABaseNPCSimpleChase::TickRotateToTarget(float DeltaSeconds)
 {
-	FVector ToTarget = AttackTarget->GetActorLocation() - GetActorLocation();
+	FVector ToTarget = Player->GetActorLocation() - GetActorLocation();
 	ToTarget.Z = 0.0f;
 	ToTarget.Normalize();
 	SetActorRotation(UKismetMathLibrary::MakeRotFromXZ(FMath::Lerp(GetActorForwardVector(), ToTarget, DeltaSeconds * SimpleAttack.AttackRotationMultiplier), FVector::ZAxisVector));
@@ -178,41 +176,13 @@ void ABaseNPCSimpleChase::TickMoveForward(float DeltaSeconds)
 	AddActorWorldOffset(GetActorForwardVector() * SimpleAttack.AttackMoveForwardSpeed * DeltaSeconds, true);
 }
 
-void ABaseNPCSimpleChase::TickHeal(float DeltaSeconds)
-{
-	float ToHeal = HealSpeed * DeltaSeconds;
-
-	if (ToHeal < HealRemaining)
-	{
-		HealRemaining -= ToHeal;
-		Health += ToHeal;
-
-		if (Health > MaxHealth)
-		{
-			Health = MaxHealth;
-		}
-	}
-	else
-	{
-		HealRemaining = 0.0f;
-		Health += HealRemaining;
-
-		if (Health > MaxHealth)
-		{
-			Health = MaxHealth;
-		}
-
-		OnEndHealBuff();
-	}
-}
-
 void ABaseNPCSimpleChase::CheckPlayerHit()
 {
 	TSet<AActor*> collisions;
 	AttackCollision->GetOverlappingActors(collisions, AHypercubeCharacter::StaticClass());
 	if (collisions.Num())
 	{
-		AttackTarget->TakeDamage(SimpleAttack.Damage);
+		Player->TakeDamage(SimpleAttack.Damage);
 	}
 }
 
@@ -265,7 +235,7 @@ void ABaseNPCSimpleChase::TakeDamage(float Damage)
 
 void ABaseNPCSimpleChase::OnNotice()
 {
-	AttackTarget->OnEnemyAggro(this);
+	Player->OnEnemyAggro(this);
 	MovePhase = EEnemyPhase::Noticing;
 	SetTickState(true);
 	GetWorld()->GetTimerManager().SetTimer(NoticeTimerHandle, this, &ABaseNPCSimpleChase::AfterNotice, AggroTime, false);
@@ -335,7 +305,7 @@ void ABaseNPCSimpleChase::OnEndJump()
 
 void ABaseNPCSimpleChase::PlayDeath()
 {
-	AttackTarget->OnEnemyDeath(this);
+	Player->OnEnemyDeath(this);
 	EnemyDeathDelegate.Broadcast();
 }
 
@@ -387,22 +357,60 @@ void ABaseNPCSimpleChase::OnEndDamageDebuff()
 	EnemyActionDelegate.Broadcast(EEnemyAction::DamageDecreaseDebuffEnd, true);
 }
 
-void ABaseNPCSimpleChase::SetHealBuff(float Heal, float Time)
+void ABaseNPCSimpleChase::SetHealBuff(float Heal, int BurstCount)
 {
 	HealRemaining = Heal;
-	HealSpeed = Heal / Time;
-	SetTickState(true);
+	HealPerBurst = Heal / (float)BurstCount;
+
+	if (bIsHealing)
+	{
+		return;
+	}
+
+	bIsHealing = true;
+	GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &ABaseNPCSimpleChase::HealBurst, HealBurstTimeBetween, false);
+	EnemyActionDelegate.Broadcast(EEnemyAction::HealBuff, true);
+}
+
+void ABaseNPCSimpleChase::HealBurst()
+{
+	if (HealRemaining <= HealPerBurst)
+	{
+		HealRemaining = 0.0f;
+		Health += HealRemaining;
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		OnEndHealBuff();
+	}
+	else
+	{
+		HealRemaining -= HealPerBurst;
+		Health += HealPerBurst;
+
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &ABaseNPCSimpleChase::HealBurst, HealBurstTimeBetween, false);
+	}
+
+	EnemyActionDelegate.Broadcast(EEnemyAction::HealBurst, true);
 }
 
 void ABaseNPCSimpleChase::OnEndHealBuff()
 {
-	SetTickState(false);
 	UE_LOG(LogTemp, Warning, TEXT("Enemy Healing Ends!"));
+	bIsHealing = false;
+	EnemyActionDelegate.Broadcast(EEnemyAction::HealBuffEnd, true);
 }
 
 bool ABaseNPCSimpleChase::PlayerHasSightOn() const
 {
-	if (!AttackTarget->GetController()->LineOfSightTo(this))
+	if (!Player->GetController()->LineOfSightTo(this))
 	{
 		return false;
 	}
@@ -426,7 +434,7 @@ void ABaseNPCSimpleChase::Unstuck()
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARecastNavMesh::StaticClass(), FoundActors);
 	class ARecastNavMesh* NavData = Cast<ARecastNavMesh>(FoundActors[0]);
 	FNavLocation FindResult;
-	FVector PlayerLocation = AttackTarget->GetActorLocation();
+	FVector PlayerLocation = Player->GetActorLocation();
 	for (int i = 0; i < MaxAttempsToUnstuck; ++i)
 	{
 		if (NavData->GetRandomReachablePointInRadius(PlayerLocation, UnstuckAroundPlayerRadius, FindResult))
@@ -454,6 +462,23 @@ float ABaseNPCSimpleChase::GetStatMultiplier() const
 		return 1.0f + 2.0f * LevelController->GetEnemyLevelingPercentage();
 	case EEnemyLevel::Level3:
 		return 1.0f + 3.0f * LevelController->GetEnemyLevelingPercentage();
+	default:
+		return 1.0f;
+	}
+}
+
+float ABaseNPCSimpleChase::GetDamageMultiplierMultiplier() const
+{
+	switch (Level)
+	{
+	case EEnemyLevel::Level0:
+		return 1.0f;
+	case EEnemyLevel::Level1:
+		return 2.0f;
+	case EEnemyLevel::Level2:
+		return 3.0f;
+	case EEnemyLevel::Level3:
+		return 4.0f;
 	default:
 		return 1.0f;
 	}
@@ -510,6 +535,8 @@ void ABaseNPCSimpleChase::SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewL
 	default:
 		break;
 	}
+
+	Player->UpdateDamageMultiplier();
 
 	EnemyActionDelegate.Broadcast(EEnemyAction::LevelUpdate, true);
 }

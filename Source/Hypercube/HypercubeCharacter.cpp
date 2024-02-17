@@ -64,7 +64,9 @@ AHypercubeCharacter::AHypercubeCharacter()
 	Vampirism = 0.0f;
 	bIsInvincible = false;
 
-	HealSpeed = HealRemaining = 0.0f;
+	HealBurstTimeBetween = 1.0f;
+	HealRemaining = 0.0f;
+	bIsHealing = false;
 
 	DashDistance = 700.0f;
 	DashTime = DashTimer = 0.2f;
@@ -215,33 +217,6 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 		if (FMath::IsNearlyEqual(FollowCamera->FieldOfView, TargetCameraFov, 0.001f))
 		{
 			FollowCamera->FieldOfView = TargetCameraFov;
-		}
-	}
-	if (HealRemaining > 0.0f)
-	{
-		float ToHeal = HealSpeed * DeltaSeconds;
-
-		if (ToHeal < HealRemaining)
-		{
-			HealRemaining -= ToHeal;
-			Health += ToHeal;
-
-			if (Health > MaxHealth)
-			{
-				Health = MaxHealth;
-			}
-		}
-		else
-		{
-			HealRemaining = 0.0f;
-			Health += HealRemaining;
-
-			if (Health > MaxHealth)
-			{
-				Health = MaxHealth;
-			}
-
-			OnEndHealBuff();
 		}
 	}
 	Super::Tick(DeltaSeconds);
@@ -502,7 +477,13 @@ void AHypercubeCharacter::PlayDeath()
 
 void AHypercubeCharacter::UpdateDamageMultiplier()
 {
-	TargetDamageMultiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+	TargetDamageMultiplier = 1.0f;
+
+	for (ABaseNPCSimpleChase* Enemy : EnemyChasing)
+	{
+		TargetDamageMultiplier += DamageMultiplierEnemyCost * Enemy->GetDamageMultiplierMultiplier();
+	}
+
 	if (TargetDamageMultiplier >= DamageMultiplier)
 	{
 		if (GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle))
@@ -576,11 +557,6 @@ void AHypercubeCharacter::Pause()
 	PauseDelegate.Broadcast(bIsGamePaused);
 }
 
-int AHypercubeCharacter::GetEnemyChasingCount() const
-{
-	return EnemyChasing.Num();
-}
-
 void AHypercubeCharacter::SetSpeedBuff(float SpeedMult, float JumpMult, float Time)
 {
 	if (GetWorld()->GetTimerManager().IsTimerActive(SpeedBuffTimerHandle))
@@ -610,13 +586,53 @@ void AHypercubeCharacter::OnEndSpeedBuff()
 	SpeedBuffEffectWidget->SetVisibility(false);
 }
 
-void AHypercubeCharacter::SetHealBuff(float Heal, float Time)
+void AHypercubeCharacter::SetHealBuff(float Heal, int BurstCount)
 {
 	HealRemaining = Heal;
-	HealSpeed = Heal / Time;
+	HealPerBurst = Heal / (float)BurstCount;
+
+	if (bIsHealing)
+	{
+		return;
+	}
+
+	bIsHealing = true;
+	GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &AHypercubeCharacter::HealBurst, HealBurstTimeBetween, false);
+	PlayerActionDelegate.Broadcast(EPlayerAction::HealBuff);
+}
+
+void AHypercubeCharacter::HealBurst()
+{
+	if (HealRemaining <= HealPerBurst)
+	{
+		HealRemaining = 0.0f;
+		Health += HealRemaining;
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		OnEndHealBuff();
+	}
+	else
+	{
+		HealRemaining -= HealPerBurst;
+		Health += HealPerBurst;
+
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &AHypercubeCharacter::HealBurst, HealBurstTimeBetween, false);
+	}
+
+	PlayerActionDelegate.Broadcast(EPlayerAction::HealBurst);
 }
 
 void AHypercubeCharacter::OnEndHealBuff()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Player Healing Ends!"));
+	bIsHealing = false;
+	PlayerActionDelegate.Broadcast(EPlayerAction::HealBuffEnd);
 }

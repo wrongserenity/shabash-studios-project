@@ -66,6 +66,9 @@ enum class EEnemyAction : uint8
 	SlowDebuffEnd UMETA(DisplayName = "SlowDebuffEnd"),
 	DamageDecreaseDebuff UMETA(DisplayName = "AttackDecreaseDebuff"),
 	DamageDecreaseDebuffEnd UMETA(DisplayName = "AttackDecreaseDebuffEnd"),
+	HealBuff UMETA(DisplayName = "HealBuff"),
+	HealBurst UMETA(DisplayName = "HealBurst"),
+	HealBuffEnd UMETA(DisplayName = "HealBuffEnd"),
 	LevelUpdate UMETA(DisplayName = "LevelUpdate")
 };
 
@@ -133,6 +136,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float MaxHealth;
 
+	// Time between heal bursts while healing
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float HealBurstTimeBetween;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Jump")
 	float JumpTime;
 
@@ -184,7 +191,7 @@ protected:
 
 	FTimerHandle AttackTimerHandle;
 	EAttackPhase AttackPhase;
-	class AHypercubeCharacter* AttackTarget;
+	class AHypercubeCharacter* Player;
 
 	// Dealayed initialization
 	FTimerHandle DelayedInitTimerHandle;
@@ -203,8 +210,6 @@ protected:
 	void TickRotateToTarget(float DeltaSeconds);
 	void TickMoveForward(float DeltaSeconds);
 	void CheckPlayerHit();
-
-	void TickHeal(float DeltaSeconds);
 
 	void AfterNotice();
 	
@@ -226,8 +231,11 @@ protected:
 	float BaseDamage;
 	void OnEndDamageDebuff();
 
+	float HealPerBurst;
 	float HealRemaining;
-	float HealSpeed;
+	bool bIsHealing;
+	FTimerHandle HealBuffTimerHandle;
+	void HealBurst();
 	void OnEndHealBuff();
 
 	void ResetLevel();
@@ -266,7 +274,7 @@ public:
 	void SetDamageDebuff(float Mult, float Time);
 
 	UFUNCTION(BlueprintCallable)
-	void SetHealBuff(float Heal, float Time);
+	void SetHealBuff(float Heal, int BurstCount);
 
 	// True if player camera has sight on this NPC
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -279,6 +287,10 @@ public:
 	// Get stat multiplier according to enemy level
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	float GetStatMultiplier() const;
+
+	// How does Damage multiplier increase multiplies according to enemy level
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetDamageMultiplierMultiplier() const;
 
 	UFUNCTION(BlueprintCallable)
 	void SetLevel(EEnemyLevel NewLevel, EEnemyLevelingType NewLevelingType);
