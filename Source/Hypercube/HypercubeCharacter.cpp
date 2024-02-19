@@ -515,6 +515,8 @@ void AHypercubeCharacter::OnEnemyAggro(class ABaseNPCSimpleChase* Enemy)
 		EnemyChasing.Add(Enemy);
 		UpdateDamageMultiplier();
 	}
+
+	LevelController->UpdateStackState();
 }
 
 void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
@@ -532,12 +534,16 @@ void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
 		EnemyChasing.Remove(Enemy);
 		UpdateDamageMultiplier();
 	}
+
+	LevelController->UpdateStackState();
 }
 
 void AHypercubeCharacter::RemoveEnemyChasing(ABaseNPCSimpleChase* Enemy)
 {
 	EnemyChasing.Remove(Enemy);
 	UpdateDamageMultiplier();
+
+	LevelController->UpdateStackState();
 }
 
 void AHypercubeCharacter::SetMouseCursorShow(bool bToShow)

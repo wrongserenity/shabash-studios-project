@@ -26,8 +26,17 @@ struct FScoreboardData
 	bool operator<(const FScoreboardData& Other) const;
 };
 
+UENUM(BlueprintType)
+enum class EEnemyStackState : uint8
+{
+	None UMETA(DisplayName = "None"),
+	SoftStack UMETA(DisplayName = "SoftStack"),
+	HardStack UMETA(DisplayName = "HardStack")
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllEnemiesDead);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFewEnemiesRemaining);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHardStackDeactivation);
 
 UCLASS()
 class HYPERCUBE_API ABaseLevelController : public AActor
@@ -61,6 +70,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnFewEnemiesRemaining FewEnemiesRemainingDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnHardStackDeactivation HardStackDeactivationDelegate;
+
 protected:
 
 	// Name of save slot
@@ -86,6 +98,24 @@ protected:
 	// Defines enemy stats increasing 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float EnemyLevelingPercentage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	EEnemyStackState StackState;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	int SoftStackBeginEnemyCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	int SoftStackEndEnemyCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	int HardStackBeginEnemyCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	int HardStackEndEnemyCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float EnemyStackQueryFrequency;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	TArray<FString> LevelNames;
@@ -218,6 +248,10 @@ protected:
 
 	int GetCurMapIndex() const;
 
+	bool bIsHardStackActive;
+	FTimerHandle EnemyStackQueryTimerHandle;
+	void EnemyStackQuery();
+
 	void ReadScoreboardData();
 
 	FTimerHandle NoticeSoundTurnOffTimerHandle;
@@ -303,6 +337,16 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	float GetTargetMusicParameter() const;
+
+	// Called upon enemy chasing count change
+	UFUNCTION(BlueprintCallable)
+	void UpdateStackState();
+
+	UFUNCTION(BlueprintCallable)
+	void SoftStack();
+
+	UFUNCTION(BlueprintCallable)
+	void HardStack();
 
 	UFUNCTION(BlueprintCallable)
 	void StackEnemies(class ABaseNPCSimpleChase* Enemy1, class ABaseNPCSimpleChase* Enemy2);
@@ -410,5 +454,7 @@ T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>
 	}
 	return Values.Last();
 }
+
+class ABaseNPCSimpleChase* GetEnemyWithMinDistance(const TArray<AActor*>& Enemies, ABaseNPCSimpleChase* EnemyToCompare);
 
 FString FloatToFString(float Val);

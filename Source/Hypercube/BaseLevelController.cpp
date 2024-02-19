@@ -43,6 +43,18 @@ ABaseLevelController::ABaseLevelController()
 
 	DifficultyParameter = 0.5f;
 
+	StackState = EEnemyStackState::None;
+
+	SoftStackBeginEnemyCount = 35;
+	SoftStackEndEnemyCount = 30;
+
+	HardStackBeginEnemyCount = 45;
+	HardStackEndEnemyCount = 40;
+
+	EnemyStackQueryFrequency = 5.0f;
+
+	bIsHardStackActive = false;
+
 	DeathCountBounds = { 1, 3, 5, 10 };
 	DeathCountValues = { 1.0f, 0.7f, 0.5f, 0.3f };
 	DeathCountCost = 0.4f;
@@ -65,7 +77,7 @@ ABaseLevelController::ABaseLevelController()
 	EnemyDamageValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f, 1.5f };
 	EnemyNoticeRadiusValues = { 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f };
 	EnemyCountPercentageValues = { 0.3f, 0.3f, 0.7f, 0.7f, 1.0f, 1.0f, 1.0f };
-	EnemyLevelingPercentageValues = { 0.3f, 0.3f, 0.3f, 0.5f, 0.5f, 0.5f, 0.5f };
+	EnemyLevelingPercentageValues = { 0.35f, 0.35f, 0.35f, 0.5f, 0.5f, 0.65f, 0.65f };
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
@@ -98,12 +110,16 @@ void ABaseLevelController::BeginPlay()
 	DifficultyParameter = GetDifficultyParameter();
 	EnemyLevelingPercentage = GetOutputParameterFrom(DifficultyParameter, DifficultyParameterBounds, EnemyLevelingPercentageValues);
 	SpawnEnemies();
+
 	MusicCompExplore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicCompLow->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicCompHigh->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 	MusicCompExplore->Play();
 	MusicCompLow->Play();
 	MusicCompHigh->Play();
+
+	EnemyStackQuery();
+
 	Super::BeginPlay();
 }
 
@@ -398,6 +414,116 @@ float ABaseLevelController::GetTargetMusicParameter() const
 	return 1.0f;
 }
 
+void ABaseLevelController::UpdateStackState()
+{
+	int EnemyCount = Player->GetEnemyChasingCount();
+
+	EEnemyStackState PreviousStackState = StackState;
+
+	if (EnemyCount < SoftStackEndEnemyCount)
+	{
+		StackState = EEnemyStackState::None;
+	}
+	else if ((StackState == EEnemyStackState::None && EnemyCount > SoftStackBeginEnemyCount && EnemyCount < HardStackBeginEnemyCount) || 
+			 (StackState == EEnemyStackState::HardStack && EnemyCount < HardStackEndEnemyCount))
+	{
+		StackState = EEnemyStackState::SoftStack;
+	}
+	else if (EnemyCount > HardStackBeginEnemyCount)
+	{
+		StackState = EEnemyStackState::HardStack;
+	}
+
+	if (PreviousStackState == EEnemyStackState::HardStack && StackState != EEnemyStackState::HardStack)
+	{
+		bIsHardStackActive = false;
+		HardStackDeactivationDelegate.Broadcast();
+	}
+}
+
+void ABaseLevelController::SoftStack()
+{
+	TArray<ABaseNPCSimpleChase*> EnemyChasing = Player->GetEnemyChasingArray();
+
+	int Index1 = FMath::RandRange(0, EnemyChasing.Num() - 1);
+	ABaseNPCSimpleChase* Enemy1 = EnemyChasing[Index1];
+
+	TArray<AActor*> OverlappingActors;
+	Enemy1->GetNoticeCollision()->GetOverlappingActors(OverlappingActors, ABaseNPCSimpleChase::StaticClass());
+
+	ABaseNPCSimpleChase* Enemy2 = OverlappingActors.Num() ? GetEnemyWithMinDistance(OverlappingActors, Enemy1) :
+															EnemyChasing[(Index1 + FMath::RandRange(1, EnemyChasing.Num() - 2)) % EnemyChasing.Num()];
+
+	Enemy1->StackWith(Enemy2);
+	Enemy2->StackWith(Enemy1);
+}
+
+void ABaseLevelController::HardStack()
+{
+	if (bIsHardStackActive)
+	{
+		return;
+	}
+
+	bIsHardStackActive = true;
+
+	TSet<ABaseNPCSimpleChase*> EnemyChasing = Player->GetEnemyChasingSet();
+	TSet<ABaseNPCSimpleChase*> EnemyPaired;
+
+	for (ABaseNPCSimpleChase* Enemy : EnemyChasing)
+	{
+		if (EnemyPaired.Contains(Enemy))
+		{
+			continue;
+		}
+
+		TArray<AActor*> OverlappingActors;
+		Enemy->GetNoticeCollision()->GetOverlappingActors(OverlappingActors, ABaseNPCSimpleChase::StaticClass());
+
+		if (!OverlappingActors.Num())
+		{
+			continue;
+		}
+		
+
+		ABaseNPCSimpleChase* Enemy2 = GetEnemyWithMinDistance(OverlappingActors, Enemy);
+
+		while (EnemyPaired.Contains(Enemy2))
+		{
+			OverlappingActors.Remove(Enemy2);
+
+			if (!OverlappingActors.Num())
+			{
+				continue;
+			}
+
+			Enemy2 = GetEnemyWithMinDistance(OverlappingActors, Enemy);
+		}
+
+		Enemy->StackWith(Enemy2);
+		Enemy2->StackWith(Enemy);
+
+		EnemyPaired.Add(Enemy);
+		EnemyPaired.Add(Enemy2);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Enemies affected by hard stack: %d"), EnemyPaired.Num());
+}
+
+void ABaseLevelController::EnemyStackQuery()
+{
+	if (StackState == EEnemyStackState::SoftStack)
+	{
+		SoftStack();
+	}
+	else if (StackState == EEnemyStackState::HardStack)
+	{
+		HardStack();
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(EnemyStackQueryTimerHandle, this, &ABaseLevelController::EnemyStackQuery, EnemyStackQueryFrequency, false);
+}
+
 void ABaseLevelController::StackEnemies(ABaseNPCSimpleChase* Enemy1, ABaseNPCSimpleChase* Enemy2)
 {
 	if (Enemy1 == Enemy2)
@@ -416,6 +542,31 @@ void ABaseLevelController::StackEnemies(ABaseNPCSimpleChase* Enemy1, ABaseNPCSim
 	RemoveEnemy(LowEnemy);
 
 	LowEnemy->Destroy();
+}
+
+ABaseNPCSimpleChase* GetEnemyWithMinDistance(const TArray<AActor*>& Enemies, ABaseNPCSimpleChase* EnemyToCompare)
+{
+	FVector Location = EnemyToCompare->GetActorLocation();
+
+	float MinDistance = FVector::Distance(Enemies[0]->GetActorLocation(), Location);
+	AActor* MinEnemy = Enemies[0];
+
+	for (int i = 1; i < Enemies.Num(); ++i)
+	{
+		if (Enemies[i]->GetActorLocation() == Location)
+		{
+			continue;
+		}
+
+		float Distance = FVector::Distance(Enemies[i]->GetActorLocation(), Location);
+		if (Distance < MinDistance)
+		{
+			MinDistance = Distance;
+			MinEnemy = Enemies[i];
+		}
+	}
+
+	return Cast<ABaseNPCSimpleChase>(MinEnemy);
 }
 
 FString ABaseLevelController::GetScoreboard(int Num)

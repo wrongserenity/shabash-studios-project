@@ -318,6 +318,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE int GetEnemyChasingCount() const { return EnemyChasing.Num(); }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE TArray<class ABaseNPCSimpleChase*> GetEnemyChasingArray() const { return EnemyChasing.Array(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE TSet<class ABaseNPCSimpleChase*> GetEnemyChasingSet() const { return EnemyChasing; }
+
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
 

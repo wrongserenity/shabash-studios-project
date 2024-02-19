@@ -550,3 +550,8 @@ void ABaseNPCSimpleChase::IncreaseLevel(int ToIncrease)
 
 	SetLevel(Level + ToIncrease, LevelingType);
 }
+
+void ABaseNPCSimpleChase::StackWith(ABaseNPCSimpleChase* OtherEnemy)
+{
+	EnemyStackQueryDelegate.Broadcast(OtherEnemy);
+}

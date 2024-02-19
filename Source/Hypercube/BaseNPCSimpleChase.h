@@ -83,6 +83,7 @@ enum class EEnemyLevelingType : uint8
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyAction, EEnemyAction, Action, bool, Success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyStackQuery, ABaseNPCSimpleChase*, OtherEnemy);
 
 UCLASS()
 class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
@@ -120,6 +121,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
 	FOnEnemyAction EnemyActionDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = EventDispatchers)
+	FOnEnemyStackQuery EnemyStackQueryDelegate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float Health;
@@ -291,4 +295,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void IncreaseLevel(int ToIncrease);
+
+	UFUNCTION(BlueprintCallable)
+	void StackWith(ABaseNPCSimpleChase* OtherEnemy);
 };
