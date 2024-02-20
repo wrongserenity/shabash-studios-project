@@ -447,15 +447,12 @@ void ABaseLevelController::SoftStack()
 
 	int Index1 = FMath::RandRange(0, EnemyChasing.Num() - 1);
 	ABaseNPCSimpleChase* Enemy1 = EnemyChasing[Index1];
+	EnemyChasing.RemoveAt(Index1);
 
-	TArray<AActor*> OverlappingActors;
-	Enemy1->GetNoticeCollision()->GetOverlappingActors(OverlappingActors, ABaseNPCSimpleChase::StaticClass());
+	int Index2 = GetEnemyIndexWithMinDistance(EnemyChasing, Enemy1);
 
-	ABaseNPCSimpleChase* Enemy2 = OverlappingActors.Num() ? GetEnemyWithMinDistance(OverlappingActors, Enemy1) :
-															EnemyChasing[(Index1 + FMath::RandRange(1, EnemyChasing.Num() - 2)) % EnemyChasing.Num()];
-
-	Enemy1->StackWith(Enemy2);
-	Enemy2->StackWith(Enemy1);
+	Enemy1->StackWith(EnemyChasing[Index2]);
+	EnemyChasing[Index2]->StackWith(Enemy1);
 }
 
 void ABaseLevelController::HardStack()
@@ -467,47 +464,20 @@ void ABaseLevelController::HardStack()
 
 	bIsHardStackActive = true;
 
-	TSet<ABaseNPCSimpleChase*> EnemyChasing = Player->GetEnemyChasingSet();
-	TSet<ABaseNPCSimpleChase*> EnemyPaired;
+	TArray<ABaseNPCSimpleChase*> EnemyChasing = Player->GetEnemyChasingArray();
 
-	for (ABaseNPCSimpleChase* Enemy : EnemyChasing)
+	while (EnemyChasing.Num() > 1)
 	{
-		if (EnemyPaired.Contains(Enemy))
-		{
-			continue;
-		}
+		ABaseNPCSimpleChase* Enemy1 = EnemyChasing.Pop();
 
-		TArray<AActor*> OverlappingActors;
-		Enemy->GetNoticeCollision()->GetOverlappingActors(OverlappingActors, ABaseNPCSimpleChase::StaticClass());
+		int Index2 = GetEnemyIndexWithMinDistance(EnemyChasing, Enemy1);
 
-		if (!OverlappingActors.Num())
-		{
-			continue;
-		}
-		
+		ABaseNPCSimpleChase* Enemy2 = EnemyChasing[Index2];
+		EnemyChasing.RemoveAt(Index2);
 
-		ABaseNPCSimpleChase* Enemy2 = GetEnemyWithMinDistance(OverlappingActors, Enemy);
-
-		while (EnemyPaired.Contains(Enemy2))
-		{
-			OverlappingActors.Remove(Enemy2);
-
-			if (!OverlappingActors.Num())
-			{
-				continue;
-			}
-
-			Enemy2 = GetEnemyWithMinDistance(OverlappingActors, Enemy);
-		}
-
-		Enemy->StackWith(Enemy2);
-		Enemy2->StackWith(Enemy);
-
-		EnemyPaired.Add(Enemy);
-		EnemyPaired.Add(Enemy2);
+		Enemy1->StackWith(Enemy2);
+		Enemy2->StackWith(Enemy1);
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Enemies affected by hard stack: %d"), EnemyPaired.Num());
 }
 
 void ABaseLevelController::EnemyStackQuery()
@@ -544,16 +514,16 @@ void ABaseLevelController::StackEnemies(ABaseNPCSimpleChase* Enemy1, ABaseNPCSim
 	LowEnemy->Destroy();
 }
 
-ABaseNPCSimpleChase* GetEnemyWithMinDistance(const TArray<AActor*>& Enemies, ABaseNPCSimpleChase* EnemyToCompare)
+int GetEnemyIndexWithMinDistance(const TArray<ABaseNPCSimpleChase*>& Enemies, ABaseNPCSimpleChase* EnemyToCompare)
 {
 	FVector Location = EnemyToCompare->GetActorLocation();
 
 	float MinDistance = FVector::Distance(Enemies[0]->GetActorLocation(), Location);
-	AActor* MinEnemy = Enemies[0];
+	int Index = 0;
 
 	for (int i = 1; i < Enemies.Num(); ++i)
 	{
-		if (Enemies[i]->GetActorLocation() == Location)
+		if (Enemies[i] == EnemyToCompare)
 		{
 			continue;
 		}
@@ -562,11 +532,11 @@ ABaseNPCSimpleChase* GetEnemyWithMinDistance(const TArray<AActor*>& Enemies, ABa
 		if (Distance < MinDistance)
 		{
 			MinDistance = Distance;
-			MinEnemy = Enemies[i];
+			Index = i;
 		}
 	}
 
-	return Cast<ABaseNPCSimpleChase>(MinEnemy);
+	return Index;
 }
 
 FString ABaseLevelController::GetScoreboard(int Num)

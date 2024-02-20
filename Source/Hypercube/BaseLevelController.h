@@ -455,6 +455,6 @@ T GetOutputParameterFrom(float Val, const TArray<float>& Bounds, const TArray<T>
 	return Values.Last();
 }
 
-class ABaseNPCSimpleChase* GetEnemyWithMinDistance(const TArray<AActor*>& Enemies, ABaseNPCSimpleChase* EnemyToCompare);
+int GetEnemyIndexWithMinDistance(const TArray<class ABaseNPCSimpleChase*>& Enemies, class ABaseNPCSimpleChase* EnemyToCompare);
 
 FString FloatToFString(float Val);
