@@ -16,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/WidgetComponent.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Base class for player Character
 
@@ -130,6 +131,12 @@ AHypercubeCharacter::AHypercubeCharacter()
 	SpeedBuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
 	SpeedBuffEffectWidget->SetVisibility(false);
 
+	HealBuffParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Health Buff Particle System"));
+	HealBuffParticleSystem->SetupAttachment(RootComponent);
+	HealBuffParticleSystem->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	HealBuffParticleSystem->SetAutoActivate(false);
+	HealBuffParticleSystem->SetActive(false);
+
 	DashBarPercentage = 1.0f;
 }
 
@@ -219,6 +226,11 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 			FollowCamera->FieldOfView = TargetCameraFov;
 		}
 	}
+	if (bIsHealing)
+	{
+		HealBuffParticleSystem->SetWorldRotation(FRotator::ZeroRotator, false);
+	}
+
 	Super::Tick(DeltaSeconds);
 }
 
@@ -610,6 +622,7 @@ void AHypercubeCharacter::SetHealBuff(float Heal, int BurstCount)
 
 	bIsHealing = true;
 	GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &AHypercubeCharacter::HealBurst, HealBurstTimeBetween, false);
+	HealBuffParticleSystem->SetActive(true);
 	PlayerActionDelegate.Broadcast(EPlayerAction::HealBuff);
 }
 
@@ -646,5 +659,23 @@ void AHypercubeCharacter::OnEndHealBuff()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Player Healing Ends!"));
 	bIsHealing = false;
+	HealBuffParticleSystem->SetActive(false);
 	PlayerActionDelegate.Broadcast(EPlayerAction::HealBuffEnd);
+}
+
+float AHypercubeCharacter::GetPowerVFXAlpha()
+{
+	if (DamageMultiplier <= 3.0f)
+	{
+		return 0.0f;
+	}
+	if (DamageMultiplier <= 5.0f)
+	{
+		return (DamageMultiplier - 3.0f) / 4.0f;
+	}
+	if (DamageMultiplier <= 50.0f)
+	{
+		return 0.5f + (DamageMultiplier - 5.0f) / 90.0f;
+	}
+	return 1.0f;
 }

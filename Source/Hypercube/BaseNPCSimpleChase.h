@@ -109,6 +109,9 @@ class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* DebugDamageIndicator;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UParticleSystemComponent* HealBuffParticleSystem;
+
 public:
 
 	ABaseNPCSimpleChase();

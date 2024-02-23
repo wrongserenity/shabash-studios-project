@@ -82,27 +82,30 @@ class AHypercubeCharacter : public ACharacter
 	class UCameraComponent* FollowCamera;
 
 	// Capsule hitbox
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 	class UCapsuleComponent* Capsule;
 
 	// Box collision of attack
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* AttackCollision;
 
 	// Box component for attack phases debug viewing
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* DebugAttackCollision;
 
 	// Some mesh appearing above character when damaged
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* DebugDamageIndicator;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controller, meta = (AllowPrivateAccess = "true"))
 	class APlayerController* PlayerController;
 
 	// Widget of speed buff
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent* SpeedBuffEffectWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UParticleSystemComponent* HealBuffParticleSystem;
 
 public:
 	AHypercubeCharacter();
@@ -276,7 +279,7 @@ protected:
 	static inline float DashVelocityCurve(float x);
 
 	// [0, 1] -> [0, 1] function that defines alpha of damage FX vignette on time
-	static inline float DamageFXCurve(float x); 
+	static inline float DamageFXCurve(float x);
 
 	// On end of invincibility after damage
 	void OnEndInvincibility();
@@ -355,4 +358,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void RemoveEnemyChasing(class ABaseNPCSimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetPowerVFXAlpha();
 };

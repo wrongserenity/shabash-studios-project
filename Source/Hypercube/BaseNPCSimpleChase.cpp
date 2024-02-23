@@ -11,6 +11,7 @@
 #include "Components/WidgetComponent.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavigationSystem.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Base class for enemy NPC
 
@@ -78,6 +79,12 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	DebugDamageIndicatorTime = 3.0f;
 
 	bIsDebugOn = false;
+
+	HealBuffParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Health Buff Particle System"));
+	HealBuffParticleSystem->SetupAttachment(RootComponent);
+	HealBuffParticleSystem->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	HealBuffParticleSystem->SetAutoActivate(false);
+	HealBuffParticleSystem->SetActive(false);
 
 	Level = 0;
 	LevelingType = EEnemyLevelingType::None;
@@ -159,6 +166,10 @@ void ABaseNPCSimpleChase::Tick(float DeltaSeconds)
 	if (MovePhase == EEnemyPhase::Noticing)
 	{
 		TickRotateToTarget(DeltaSeconds);
+	}
+	if (bIsHealing)
+	{
+		HealBuffParticleSystem->SetWorldRotation(FRotator::ZeroRotator, false);
 	}
 	Super::Tick(DeltaSeconds);
 }
@@ -368,6 +379,8 @@ void ABaseNPCSimpleChase::SetHealBuff(float Heal, int BurstCount)
 	}
 
 	bIsHealing = true;
+	HealBuffParticleSystem->SetActive(true);
+	SetTickState(true);
 	GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &ABaseNPCSimpleChase::HealBurst, HealBurstTimeBetween, false);
 	EnemyActionDelegate.Broadcast(EEnemyAction::HealBuff, true);
 }
@@ -405,6 +418,8 @@ void ABaseNPCSimpleChase::OnEndHealBuff()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Enemy Healing Ends!"));
 	bIsHealing = false;
+	HealBuffParticleSystem->SetActive(false);
+	SetTickState(false);
 	EnemyActionDelegate.Broadcast(EEnemyAction::HealBuffEnd, true);
 }
 
