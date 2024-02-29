@@ -11,7 +11,7 @@ ABaseEnemySpawnPoint::ABaseEnemySpawnPoint()
 	EnemySpawnHeight = Cast<ABaseNPCSimpleChase>(EnemyClass->GetDefaultObject())->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 }
 
-class ABaseNPCSimpleChase* ABaseEnemySpawnPoint::SpawnEnemy() const
+class ABaseNPCSimpleChase* ABaseEnemySpawnPoint::SpawnEnemy(int Level, EEnemyLevelingType LevelingType) const
 {
 	FVector SpawnLocation = GetActorLocation();
 	SpawnLocation.Z += EnemySpawnHeight;
@@ -23,6 +23,7 @@ class ABaseNPCSimpleChase* ABaseEnemySpawnPoint::SpawnEnemy() const
 		if (Enemy)
 		{
 			Enemy->SpawnDefaultController();
+			Enemy->SetLevel(Level, LevelingType);
 			return Enemy;
 		}
 	}

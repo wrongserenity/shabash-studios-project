@@ -31,7 +31,10 @@ enum class EPlayerAction : uint8
 {
 	Attack UMETA(DisplayName = "Attack"),
 	Dash UMETA(DisplayName = "Dash"),
-	Damaged UMETA(DisplayName = "Damaged")
+	Damaged UMETA(DisplayName = "Damaged"),
+	HealBuff UMETA(DisplayName = "HealBuff"),
+	HealBurst UMETA(DisplayName = "HealBurst"),
+	HealBuffEnd UMETA(DisplayName = "HealBuffEnd")
 };
 
 USTRUCT(BlueprintType)
@@ -79,27 +82,30 @@ class AHypercubeCharacter : public ACharacter
 	class UCameraComponent* FollowCamera;
 
 	// Capsule hitbox
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 	class UCapsuleComponent* Capsule;
 
 	// Box collision of attack
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* AttackCollision;
 
 	// Box component for attack phases debug viewing
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* DebugAttackCollision;
 
 	// Some mesh appearing above character when damaged
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* DebugDamageIndicator;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controller, meta = (AllowPrivateAccess = "true"))
 	class APlayerController* PlayerController;
 
 	// Widget of speed buff
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent* SpeedBuffEffectWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UParticleSystemComponent* HealBuffParticleSystem;
 
 public:
 	AHypercubeCharacter();
@@ -137,6 +143,10 @@ public:
 	// Part of enemy HP that adds upon enemy death
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
 	float Vampirism;
+
+	// Time between heal bursts while healing
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Health")
+	float HealBurstTimeBetween;
 
 	// Distance that character covers when dashing
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Dash")
@@ -255,6 +265,11 @@ protected:
 	float TargetCameraFov;
 	FTimerHandle SpeedBuffTimerHandle;
 
+	bool bIsHealing;
+	float HealPerBurst; 
+	float HealRemaining;
+	FTimerHandle HealBuffTimerHandle;
+
 protected:
 
 	void MoveForward(float Value);
@@ -264,12 +279,11 @@ protected:
 	static inline float DashVelocityCurve(float x);
 
 	// [0, 1] -> [0, 1] function that defines alpha of damage FX vignette on time
-	static inline float DamageFXCurve(float x); 
+	static inline float DamageFXCurve(float x);
 
 	// On end of invincibility after damage
 	void OnEndInvincibility();
 
-	void UpdateDamageMultiplier();
 	void OnEndDamageMultiplierStays();
 
 	void Dash();
@@ -286,6 +300,9 @@ protected:
 
 	void OnEndSpeedBuff();
 
+	void HealBurst();
+	void OnEndHealBuff();
+
 	void ActivateDebugDamageIndicator();
 	void OnEndDebugDamageIndicatorTimer();
 
@@ -300,6 +317,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FORCEINLINE class ABaseLevelController* GetLevelController() const { return LevelController; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE int GetEnemyChasingCount() const { return EnemyChasing.Num(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE TArray<class ABaseNPCSimpleChase*> GetEnemyChasingArray() const { return EnemyChasing.Array(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FORCEINLINE TSet<class ABaseNPCSimpleChase*> GetEnemyChasingSet() const { return EnemyChasing; }
 
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(float Damage);
@@ -317,13 +343,22 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ReceiveAttackInput();
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	int GetEnemyChasingCount() const;
-
 	UFUNCTION(BlueprintCallable)
 	void SetSpeedBuff(float SpeedMult, float JumpMult, float Time);
+
+	UFUNCTION(BlueprintCallable)
+	void SetHealBuff(float Heal, int BurstCount);
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateDamageMultiplier();
 
 	void OnEnemyAggro(class ABaseNPCSimpleChase* Enemy);
 
 	void OnEnemyDeath(class ABaseNPCSimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveEnemyChasing(class ABaseNPCSimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetPowerVFXAlpha();
 };

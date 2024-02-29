@@ -16,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/WidgetComponent.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Base class for player Character
 
@@ -63,6 +64,10 @@ AHypercubeCharacter::AHypercubeCharacter()
 	InvincAfterDamage = 1.0f;
 	Vampirism = 0.0f;
 	bIsInvincible = false;
+
+	HealBurstTimeBetween = 1.0f;
+	HealRemaining = 0.0f;
+	bIsHealing = false;
 
 	DashDistance = 700.0f;
 	DashTime = DashTimer = 0.2f;
@@ -125,6 +130,12 @@ AHypercubeCharacter::AHypercubeCharacter()
 	SpeedBuffEffectWidget->SetupAttachment(RootComponent);
 	SpeedBuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
 	SpeedBuffEffectWidget->SetVisibility(false);
+
+	HealBuffParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Health Buff Particle System"));
+	HealBuffParticleSystem->SetupAttachment(RootComponent);
+	HealBuffParticleSystem->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	HealBuffParticleSystem->SetAutoActivate(false);
+	HealBuffParticleSystem->SetActive(false);
 
 	DashBarPercentage = 1.0f;
 }
@@ -215,6 +226,11 @@ void AHypercubeCharacter::Tick(float DeltaSeconds)
 			FollowCamera->FieldOfView = TargetCameraFov;
 		}
 	}
+	if (bIsHealing)
+	{
+		HealBuffParticleSystem->SetWorldRotation(FRotator::ZeroRotator, false);
+	}
+
 	Super::Tick(DeltaSeconds);
 }
 
@@ -473,7 +489,13 @@ void AHypercubeCharacter::PlayDeath()
 
 void AHypercubeCharacter::UpdateDamageMultiplier()
 {
-	TargetDamageMultiplier = 1.0f + DamageMultiplierEnemyCost * EnemyChasing.Num();
+	TargetDamageMultiplier = 1.0f;
+
+	for (ABaseNPCSimpleChase* Enemy : EnemyChasing)
+	{
+		TargetDamageMultiplier += DamageMultiplierEnemyCost * Enemy->GetDamageMultiplierMultiplier();
+	}
+
 	if (TargetDamageMultiplier >= DamageMultiplier)
 	{
 		if (GetWorld()->GetTimerManager().IsTimerActive(DamageMultiplierStaysTimerHandle))
@@ -505,6 +527,8 @@ void AHypercubeCharacter::OnEnemyAggro(class ABaseNPCSimpleChase* Enemy)
 		EnemyChasing.Add(Enemy);
 		UpdateDamageMultiplier();
 	}
+
+	LevelController->UpdateStackState();
 }
 
 void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
@@ -522,6 +546,16 @@ void AHypercubeCharacter::OnEnemyDeath(class ABaseNPCSimpleChase* Enemy)
 		EnemyChasing.Remove(Enemy);
 		UpdateDamageMultiplier();
 	}
+
+	LevelController->UpdateStackState();
+}
+
+void AHypercubeCharacter::RemoveEnemyChasing(ABaseNPCSimpleChase* Enemy)
+{
+	EnemyChasing.Remove(Enemy);
+	UpdateDamageMultiplier();
+
+	LevelController->UpdateStackState();
 }
 
 void AHypercubeCharacter::SetMouseCursorShow(bool bToShow)
@@ -545,11 +579,6 @@ void AHypercubeCharacter::Pause()
 	UGameplayStatics::SetGamePaused(GetWorld(), bIsGamePaused);
 	SetMouseCursorShow(bIsGamePaused);
 	PauseDelegate.Broadcast(bIsGamePaused);
-}
-
-int AHypercubeCharacter::GetEnemyChasingCount() const
-{
-	return EnemyChasing.Num();
 }
 
 void AHypercubeCharacter::SetSpeedBuff(float SpeedMult, float JumpMult, float Time)
@@ -579,4 +608,74 @@ void AHypercubeCharacter::OnEndSpeedBuff()
 	MoveComp->JumpZVelocity = BaseJumpVelocity;
 	TargetCameraFov = BaseCameraFov;
 	SpeedBuffEffectWidget->SetVisibility(false);
+}
+
+void AHypercubeCharacter::SetHealBuff(float Heal, int BurstCount)
+{
+	HealRemaining = Heal;
+	HealPerBurst = Heal / (float)BurstCount;
+
+	if (bIsHealing)
+	{
+		return;
+	}
+
+	bIsHealing = true;
+	GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &AHypercubeCharacter::HealBurst, HealBurstTimeBetween, false);
+	HealBuffParticleSystem->SetActive(true);
+	PlayerActionDelegate.Broadcast(EPlayerAction::HealBuff);
+}
+
+void AHypercubeCharacter::HealBurst()
+{
+	if (HealRemaining <= HealPerBurst)
+	{
+		HealRemaining = 0.0f;
+		Health += HealRemaining;
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		OnEndHealBuff();
+	}
+	else
+	{
+		HealRemaining -= HealPerBurst;
+		Health += HealPerBurst;
+
+		if (Health > MaxHealth)
+		{
+			Health = MaxHealth;
+		}
+
+		GetWorld()->GetTimerManager().SetTimer(HealBuffTimerHandle, this, &AHypercubeCharacter::HealBurst, HealBurstTimeBetween, false);
+	}
+
+	PlayerActionDelegate.Broadcast(EPlayerAction::HealBurst);
+}
+
+void AHypercubeCharacter::OnEndHealBuff()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Player Healing Ends!"));
+	bIsHealing = false;
+	HealBuffParticleSystem->SetActive(false);
+	PlayerActionDelegate.Broadcast(EPlayerAction::HealBuffEnd);
+}
+
+float AHypercubeCharacter::GetPowerVFXAlpha()
+{
+	if (DamageMultiplier <= 3.0f)
+	{
+		return 0.0f;
+	}
+	if (DamageMultiplier <= 5.0f)
+	{
+		return (DamageMultiplier - 3.0f) / 4.0f;
+	}
+	if (DamageMultiplier <= 50.0f)
+	{
+		return 0.5f + (DamageMultiplier - 5.0f) / 90.0f;
+	}
+	return 1.0f;
 }
