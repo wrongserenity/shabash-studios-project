@@ -112,6 +112,9 @@ class HYPERCUBE_API ABaseNPCSimpleChase : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
 	class UParticleSystemComponent* HealBuffParticleSystem;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UParticleSystemComponent* StackParticleSystem;
+
 public:
 
 	ABaseNPCSimpleChase();
@@ -163,6 +166,9 @@ public:
 	// Maximum number of attemps to unstuck during one iteration
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | Unstuck")
 	int MaxAttempsToUnstuck;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats | VFX")
+	float StackVFXTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
 	bool bIsDebugOn;
@@ -236,7 +242,11 @@ protected:
 	void HealBurst();
 	void OnEndHealBuff();
 
+	FTimerHandle StackVFXTimerHandle;
+	void OnEndStackVFX();
+
 	void ResetLevel();
+
 
 	FTimerHandle CheckPlayerSightTimerHandle;
 
@@ -301,4 +311,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void StackWith(ABaseNPCSimpleChase* OtherEnemy);
+
+	UFUNCTION(BlueprintCallable)
+	void PlayStackVFX();
 };

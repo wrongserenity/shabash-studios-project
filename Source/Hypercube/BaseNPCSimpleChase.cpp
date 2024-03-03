@@ -86,6 +86,12 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	HealBuffParticleSystem->SetAutoActivate(false);
 	HealBuffParticleSystem->SetActive(false);
 
+	StackParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Stack Particle System"));
+	StackParticleSystem->SetupAttachment(RootComponent);
+	StackParticleSystem->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
+	StackParticleSystem->SetAutoActivate(false);
+	StackParticleSystem->SetActive(false);
+
 	Level = 0;
 	LevelingType = EEnemyLevelingType::None;
 
@@ -94,6 +100,8 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	HealRemaining = 0.0f;
 	HealBurstTimeBetween = 1.0f;
 	bIsHealing = false;
+
+	StackVFXTime = 0.3f;
 }
 
 void ABaseNPCSimpleChase::BeginPlay()
@@ -569,4 +577,16 @@ void ABaseNPCSimpleChase::IncreaseLevel(int ToIncrease)
 void ABaseNPCSimpleChase::StackWith(ABaseNPCSimpleChase* OtherEnemy)
 {
 	EnemyStackQueryDelegate.Broadcast(OtherEnemy);
+}
+
+void ABaseNPCSimpleChase::PlayStackVFX()
+{
+	StackParticleSystem->SetActive(true);
+	GetWorld()->GetTimerManager().SetTimer(StackVFXTimerHandle, this, &ABaseNPCSimpleChase::OnEndStackVFX, StackVFXTime, false);
+}
+
+
+void ABaseNPCSimpleChase::OnEndStackVFX()
+{
+	StackParticleSystem->SetActive(false);
 }

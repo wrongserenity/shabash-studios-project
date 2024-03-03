@@ -445,6 +445,11 @@ void ABaseLevelController::SoftStack()
 {
 	TArray<ABaseNPCSimpleChase*> EnemyChasing = Player->GetEnemyChasingArray();
 
+	if (!EnemyChasing.Num())
+	{
+		return;
+	}
+
 	int Index1 = FMath::RandRange(0, EnemyChasing.Num() - 1);
 	ABaseNPCSimpleChase* Enemy1 = EnemyChasing[Index1];
 	EnemyChasing.RemoveAt(Index1);
@@ -507,6 +512,8 @@ void ABaseLevelController::StackEnemies(ABaseNPCSimpleChase* Enemy1, ABaseNPCSim
 
 	HighEnemy->IncreaseLevel(LowEnemy->GetEnemyLevel() + 1);
 	HighEnemy->Health = HighEnemy->MaxHealth;
+
+	HighEnemy->PlayStackVFX();
 
 	Player->RemoveEnemyChasing(LowEnemy);
 	RemoveEnemy(LowEnemy);
