@@ -102,6 +102,8 @@ ABaseNPCSimpleChase::ABaseNPCSimpleChase()
 	bIsHealing = false;
 
 	StackVFXTime = 0.3f;
+
+	bIsChained = false;
 }
 
 void ABaseNPCSimpleChase::BeginPlay()
@@ -238,12 +240,16 @@ void ABaseNPCSimpleChase::SetDebugAttackCollision(bool bToActivate)
 	}
 }
 
-void ABaseNPCSimpleChase::TakeDamage(float Damage)
+void ABaseNPCSimpleChase::TakeDamage(float Damage, bool bIgnoreChain)
 {
 	Health -= Damage;
 	if (bIsDebugOn)
 	{
 		ActivateDebugDamageIndicator();
+	}
+	if (bIsChained && !bIgnoreChain)
+	{
+		LevelController->DealChainDamageExcept(this, Damage);
 	}
 	EnemyActionDelegate.Broadcast(EEnemyAction::Damaged, true);
 	if (Health <= 0.0f)
@@ -325,6 +331,7 @@ void ABaseNPCSimpleChase::OnEndJump()
 void ABaseNPCSimpleChase::PlayDeath()
 {
 	Player->OnEnemyDeath(this);
+	LevelController->RemoveEnemyFromChain(this);
 	EnemyDeathDelegate.Broadcast();
 }
 
@@ -585,8 +592,28 @@ void ABaseNPCSimpleChase::PlayStackVFX()
 	GetWorld()->GetTimerManager().SetTimer(StackVFXTimerHandle, this, &ABaseNPCSimpleChase::OnEndStackVFX, StackVFXTime, false);
 }
 
-
 void ABaseNPCSimpleChase::OnEndStackVFX()
 {
 	StackParticleSystem->SetActive(false);
+}
+
+void ABaseNPCSimpleChase::SetChainBoost(float Time)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(ChainBoostTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ChainBoostTimerHandle);
+	}
+
+	DebugDamageIndicator->SetVisibility(true);
+	LevelController->AddEnemyToChain(this);
+	bIsChained = true;
+
+	GetWorld()->GetTimerManager().SetTimer(ChainBoostTimerHandle, this, &ABaseNPCSimpleChase::OnEndChainBoost, Time, false);
+}
+
+void ABaseNPCSimpleChase::OnEndChainBoost()
+{
+	DebugDamageIndicator->SetVisibility(false);
+	LevelController->RemoveEnemyFromChain(this);
+	bIsChained = false;
 }

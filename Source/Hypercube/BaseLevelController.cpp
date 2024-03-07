@@ -8,6 +8,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
+#include "NiagaraActor.h"
 
 // Base class for level controller
 // Level controller provides data saving and loading, enemy spawning and difficulty settings realisation
@@ -79,6 +80,8 @@ ABaseLevelController::ABaseLevelController()
 	EnemyCountPercentageValues = { 0.3f, 0.3f, 0.7f, 0.7f, 1.0f, 1.0f, 1.0f };
 	EnemyLevelingPercentageValues = { 0.35f, 0.35f, 0.35f, 0.5f, 0.5f, 0.65f, 0.65f };
 
+	ChainDamageMultiplier = 0.25f;
+
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 
@@ -119,6 +122,8 @@ void ABaseLevelController::BeginPlay()
 	MusicCompHigh->Play();
 
 	EnemyStackQuery();
+
+	SetActorLocation(FVector::ZeroVector);
 
 	Super::BeginPlay();
 }
@@ -517,8 +522,40 @@ void ABaseLevelController::StackEnemies(ABaseNPCSimpleChase* Enemy1, ABaseNPCSim
 
 	Player->RemoveEnemyChasing(LowEnemy);
 	RemoveEnemy(LowEnemy);
+	RemoveEnemyFromChain(LowEnemy);
 
 	LowEnemy->Destroy();
+}
+
+void ABaseLevelController::AddEnemyToChain(ABaseNPCSimpleChase* Enemy)
+{
+	if (ChainedEnemies.Contains(Enemy))
+	{
+		return;
+	}
+
+	ChainedEnemies.Add(Enemy);
+}
+
+void ABaseLevelController::RemoveEnemyFromChain(ABaseNPCSimpleChase* Enemy)
+{
+	if (!ChainedEnemies.Contains(Enemy))
+	{
+		return;
+	}
+
+	ChainedEnemies.Remove(Enemy);
+}
+
+void ABaseLevelController::DealChainDamageExcept(class ABaseNPCSimpleChase* Enemy, float Damage)
+{
+	for (ABaseNPCSimpleChase* ChainedEnemy : ChainedEnemies)
+	{
+		if (ChainedEnemy != Enemy)
+		{
+			ChainedEnemy->TakeDamage(Damage * ChainDamageMultiplier, true);
+		}
+	}
 }
 
 int GetEnemyIndexWithMinDistance(const TArray<ABaseNPCSimpleChase*>& Enemies, ABaseNPCSimpleChase* EnemyToCompare)

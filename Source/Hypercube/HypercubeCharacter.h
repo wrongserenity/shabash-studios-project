@@ -100,12 +100,11 @@ class AHypercubeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controller, meta = (AllowPrivateAccess = "true"))
 	class APlayerController* PlayerController;
 
-	// Widget of speed buff
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Debug, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* SpeedBuffEffectWidget;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
 	class UParticleSystemComponent* HealBuffParticleSystem;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UNiagaraComponent* SpeedBuffNiagara;
 
 public:
 	AHypercubeCharacter();

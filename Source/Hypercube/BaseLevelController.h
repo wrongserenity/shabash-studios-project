@@ -117,6 +117,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	float EnemyStackQueryFrequency;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
+	float ChainDamageMultiplier;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats, meta = (AllowPrivateAccess = "true"))
 	TArray<FString> LevelNames;
 
@@ -252,6 +255,8 @@ protected:
 	FTimerHandle EnemyStackQueryTimerHandle;
 	void EnemyStackQuery();
 
+	TSet<class ABaseNPCSimpleChase*> ChainedEnemies;
+
 	void ReadScoreboardData();
 
 	FTimerHandle NoticeSoundTurnOffTimerHandle;
@@ -350,6 +355,15 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void StackEnemies(class ABaseNPCSimpleChase* Enemy1, class ABaseNPCSimpleChase* Enemy2);
+
+	UFUNCTION(BlueprintCallable)
+	void AddEnemyToChain(class ABaseNPCSimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveEnemyFromChain(class ABaseNPCSimpleChase* Enemy);
+
+	UFUNCTION(BlueprintCallable)
+	void DealChainDamageExcept(class ABaseNPCSimpleChase* Enemy, float Damage);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	FString GetScoreboard(int Num);

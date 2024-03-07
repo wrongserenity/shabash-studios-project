@@ -185,6 +185,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Leveling", meta = (AllowPrivateAccess = "true"))
 	EEnemyLevelingType LevelingType;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats | Effects", meta = (AllowPrivateAccess = "true"))
+	bool bIsChained;
+
 protected:
 
 	// Semaphore that controls Tick() usage
@@ -245,6 +248,9 @@ protected:
 	FTimerHandle StackVFXTimerHandle;
 	void OnEndStackVFX();
 
+	FTimerHandle ChainBoostTimerHandle;
+	void OnEndChainBoost();
+
 	void ResetLevel();
 
 
@@ -262,7 +268,7 @@ public:
 	FORCEINLINE int GetEnemyLevel() const { return Level; }
 
 	UFUNCTION(BlueprintCallable)
-	void TakeDamage(float Damage);
+	void TakeDamage(float Damage, bool bIgnoreChain = false);
 
 	UFUNCTION(BlueprintCallable)
 	void OnNotice();
@@ -314,4 +320,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlayStackVFX();
+
+	UFUNCTION(BlueprintCallable)
+	void SetChainBoost(float Time);
 };

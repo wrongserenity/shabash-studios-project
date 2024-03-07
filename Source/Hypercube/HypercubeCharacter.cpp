@@ -15,8 +15,8 @@
 #include "BaseLevelController.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
-#include "Components/WidgetComponent.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "NiagaraComponent.h"
 
 // Base class for player Character
 
@@ -126,16 +126,16 @@ AHypercubeCharacter::AHypercubeCharacter()
 	CameraFovChangeSpeed = 10.0f;
 	SpeedBuffCameraFovMultiplicator = 1.3f;
 
-	SpeedBuffEffectWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("Speed Buff Effect"));
-	SpeedBuffEffectWidget->SetupAttachment(RootComponent);
-	SpeedBuffEffectWidget->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
-	SpeedBuffEffectWidget->SetVisibility(false);
-
 	HealBuffParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Health Buff Particle System"));
 	HealBuffParticleSystem->SetupAttachment(RootComponent);
 	HealBuffParticleSystem->SetRelativeLocation(FVector(0.0f, 0.0f, -Capsule->GetScaledCapsuleHalfHeight()));
 	HealBuffParticleSystem->SetAutoActivate(false);
 	HealBuffParticleSystem->SetActive(false);
+
+	SpeedBuffNiagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Speed Buff Niagara"));
+	SpeedBuffNiagara->SetupAttachment(GetMesh());
+	SpeedBuffNiagara->SetAutoActivate(false);
+	SpeedBuffNiagara->SetActive(false);
 
 	DashBarPercentage = 1.0f;
 }
@@ -154,6 +154,7 @@ void AHypercubeCharacter::BeginPlay()
 		LevelController = nullptr;
 	}
 	PlayerController = GetWorld()->GetFirstPlayerController();
+
 	Super::BeginPlay();
 }
 
@@ -597,7 +598,7 @@ void AHypercubeCharacter::SetSpeedBuff(float SpeedMult, float JumpMult, float Ti
 		MoveComp->JumpZVelocity *= JumpMult;
 		TargetCameraFov *= SpeedBuffCameraFovMultiplicator;
 
-		SpeedBuffEffectWidget->SetVisibility(true);
+		SpeedBuffNiagara->SetActive(true);
 	}
 	GetWorld()->GetTimerManager().SetTimer(SpeedBuffTimerHandle, this, &AHypercubeCharacter::OnEndSpeedBuff, Time, false);
 }
@@ -607,7 +608,7 @@ void AHypercubeCharacter::OnEndSpeedBuff()
 	MoveComp->MaxWalkSpeed = BaseSpeed;
 	MoveComp->JumpZVelocity = BaseJumpVelocity;
 	TargetCameraFov = BaseCameraFov;
-	SpeedBuffEffectWidget->SetVisibility(false);
+	SpeedBuffNiagara->SetActive(false);
 }
 
 void AHypercubeCharacter::SetHealBuff(float Heal, int BurstCount)
