@@ -26,6 +26,24 @@ struct FScoreboardData
 	bool operator<(const FScoreboardData& Other) const;
 };
 
+USTRUCT(BlueprintType)
+struct FChainBoostVFXData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class ABaseNPCSimpleChase* Enemy1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class ABaseNPCSimpleChase* Enemy2;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UNiagaraComponent* DefaultVFX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UNiagaraComponent* DamageVFX;
+};
+
 UENUM(BlueprintType)
 enum class EEnemyStackState : uint8
 {
@@ -58,6 +76,12 @@ class HYPERCUBE_API ABaseLevelController : public AActor
 	// Music component which plays high intensity battle music layer
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	class UAudioComponent* MusicCompHigh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UNiagaraComponent* ChainBoostNiagaraAsset;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	class UNiagaraComponent* ChainBoostDamageNiagaraAsset;
 
 public:
 
@@ -256,6 +280,7 @@ protected:
 	void EnemyStackQuery();
 
 	TSet<class ABaseNPCSimpleChase*> ChainedEnemies;
+	TArray<FChainBoostVFXData> ChainVFXData;
 
 	void ReadScoreboardData();
 

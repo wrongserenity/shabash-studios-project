@@ -8,7 +8,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
-#include "NiagaraActor.h"
+#include "NiagaraComponent.h"
 
 // Base class for level controller
 // Level controller provides data saving and loading, enemy spawning and difficulty settings realisation
@@ -99,6 +99,16 @@ ABaseLevelController::ABaseLevelController()
 	MusicRefreshFrequency = 2.0f;
 	MusicVolumeMultiplier = 0.25f;
 	MusicRefreshTimer = 0.0f;
+
+	ChainBoostNiagaraAsset = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Chain Boost Niagara Asset"));
+	ChainBoostNiagaraAsset->SetupAttachment(RootComponent);
+	ChainBoostNiagaraAsset->SetAutoActivate(false);
+	ChainBoostNiagaraAsset->SetActive(false);
+
+	ChainBoostDamageNiagaraAsset = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Chain Boost Damage Niagara Asset"));
+	ChainBoostDamageNiagaraAsset->SetupAttachment(RootComponent);
+	ChainBoostDamageNiagaraAsset->SetAutoActivate(false);
+	ChainBoostDamageNiagaraAsset->SetActive(false);
 }
 
 void ABaseLevelController::BeginPlay()
@@ -146,6 +156,17 @@ void ABaseLevelController::Tick(float DeltaSeconds)
 		MusicCompExplore->SetVolumeMultiplier(((MusicParameter > 0.5f ? 0.0f : 1.0f - MusicParameter * 2.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicCompLow->SetVolumeMultiplier(((MusicParameter < 0.5f ? MusicParameter * 2.0f : 1.0f) + 0.001f) * MusicVolumeMultiplier);
 		MusicCompHigh->SetVolumeMultiplier(((MusicParameter < 0.5f ? 0.0f : (MusicParameter - 0.5f) * 2.0f) + 0.001f) * MusicVolumeMultiplier);
+	}
+	if (ChainedEnemies.Num() > 0)
+	{
+		for (FChainBoostVFXData& Data : ChainVFXData)
+		{
+			Data.DefaultVFX->SetNiagaraVariableVec3("start_pos", Data.Enemy1->GetActorLocation());
+			Data.DefaultVFX->SetNiagaraVariableVec3("end_pos", Data.Enemy2->GetActorLocation());
+
+			Data.DamageVFX->SetNiagaraVariableVec3("start_pos", Data.Enemy1->GetActorLocation());
+			Data.DamageVFX->SetNiagaraVariableVec3("end_pos", Data.Enemy2->GetActorLocation());
+		}
 	}
 	Super::Tick(DeltaSeconds);
 }
@@ -535,6 +556,29 @@ void ABaseLevelController::AddEnemyToChain(ABaseNPCSimpleChase* Enemy)
 	}
 
 	ChainedEnemies.Add(Enemy);
+
+	TArray<ABaseNPCSimpleChase*> ChainedEnemiesArray = ChainedEnemies.Array();
+
+	ABaseNPCSimpleChase* Enemy2 = ChainedEnemiesArray.Num() == 1 ? Enemy : ChainedEnemiesArray[GetEnemyIndexWithMinDistance(ChainedEnemiesArray, Enemy)];
+
+	FChainBoostVFXData NewData;
+
+	NewData.Enemy1 = Enemy;
+	NewData.Enemy2 = Enemy2;
+
+	//FString ComponentName;
+	//ComponentName.AppendInt(reinterpret_cast<unsigned long long>(Enemy));
+	//ComponentName.AppendInt(reinterpret_cast<unsigned long long>(Enemy2));
+
+	FTransform NewTransform(FRotator::ZeroRotator, FVector::ZeroVector);
+
+	NewData.DefaultVFX = Cast<UNiagaraComponent>(AddComponentByClass(UNiagaraComponent::StaticClass(), false, NewTransform, false));
+	NewData.DefaultVFX->SetAsset(ChainBoostNiagaraAsset->GetAsset());
+
+	NewData.DamageVFX = Cast<UNiagaraComponent>(AddComponentByClass(UNiagaraComponent::StaticClass(), false, NewTransform, false));
+	NewData.DamageVFX->SetAsset(ChainBoostDamageNiagaraAsset->GetAsset());
+
+	ChainVFXData.Add(NewData);
 }
 
 void ABaseLevelController::RemoveEnemyFromChain(ABaseNPCSimpleChase* Enemy)
@@ -545,6 +589,21 @@ void ABaseLevelController::RemoveEnemyFromChain(ABaseNPCSimpleChase* Enemy)
 	}
 
 	ChainedEnemies.Remove(Enemy);
+
+	int i = 0;
+	while (i < ChainVFXData.Num())
+	{
+		if (ChainVFXData[i].Enemy1 == Enemy || ChainVFXData[i].Enemy2 == Enemy)
+		{
+			ChainVFXData[i].DefaultVFX->DestroyComponent();
+			ChainVFXData[i].DamageVFX->DestroyComponent();
+			ChainVFXData.RemoveAt(i);
+		}
+		else
+		{
+			++i;
+		}
+	}
 }
 
 void ABaseLevelController::DealChainDamageExcept(class ABaseNPCSimpleChase* Enemy, float Damage)
